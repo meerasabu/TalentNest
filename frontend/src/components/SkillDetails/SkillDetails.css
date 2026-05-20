@@ -1,0 +1,348 @@
+/* SkillDetails Component Styles */
+
+.skill-details-main {
+  background-color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+}
+
+.skill-details-scroll {
+  padding: 2rem 3rem;
+  overflow-y: auto;
+}
+
+.sk-viewer-wrapper {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.back-nav-sk {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  color: #64748B;
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.back-nav-sk:hover {
+  background-color: #FFFFFF;
+  color: #0F172A;
+  border-color: #CBD5E1;
+  transform: translateX(-4px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.back-nav-sk svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Banner Hero */
+.sk-hero-banner {
+  width: 100%;
+  height: 300px;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 2.5rem;
+  background-color: #1a1a2e;
+}
+
+.sk-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6; /* dark overlay built-in */
+}
+
+/* Gradient overlay to ensure text is readable */
+.sk-hero-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 2.5rem;
+}
+
+.sk-hero-tag {
+  background-color: rgba(79, 70, 229, 0.2);
+  color: #C7D2FE;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  align-self: flex-start;
+  border: 1px solid rgba(79, 70, 229, 0.4);
+}
+
+.sk-hero-title {
+  color: #FFFFFF;
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin: 0 0 1rem 0;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.sk-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  color: #E5E7EB;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.sk-hero-meta .sk-rate-star {
+  color: #FBBF24;
+  margin-right: 0.25rem;
+}
+
+/* Main Content Dual Grid */
+.sk-content-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 3rem;
+  margin-bottom: 4rem;
+}
+
+/* Left Column */
+.sk-content-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.sk-section-block h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 1rem 0;
+}
+
+.sk-about-text {
+  color: #4B5563;
+  font-size: 1rem;
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* Availability Pills */
+.sk-availability-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.sk-avail-pill {
+  background-color: #F9FAFB;
+  border: 1px solid #F3F4F6;
+  border-radius: 2rem;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #4B5563;
+  font-weight: 500;
+}
+
+.sk-avail-icon {
+  color: #9CA3AF;
+}
+
+/* Right Column - Seller Card */
+.sk-content-right {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sk-seller-card {
+  border: 1px solid #F3F4F6;
+  border-radius: 1.5rem;
+  padding: 2rem;
+  background-color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+.sk-seller-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+
+.sk-seller-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.25rem 0;
+}
+
+.sk-seller-role {
+  font-size: 0.75rem;
+  color: #6B7280;
+  text-align: center;
+  line-height: 1.4;
+  margin-bottom: 1.5rem;
+}
+
+.sk-btn-primary, .sk-btn-secondary {
+  width: 100%;
+  padding: 0.875rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 0.75rem;
+}
+
+.sk-btn-primary {
+  background-color: #A855F7; /* Purple */
+  border: none;
+  color: #FFFFFF;
+}
+.sk-btn-primary:hover { background-color: #9333EA; }
+
+.sk-btn-secondary {
+  background-color: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  color: #374151;
+}
+.sk-btn-secondary:hover { background-color: #F9FAFB; }
+
+.sk-bullets {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0 0;
+}
+
+.sk-bullets li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: #6B7280;
+  line-height: 1.4;
+  margin-bottom: 0.5rem;
+}
+
+.sk-bullets li::before {
+  content: "•";
+  color: #A855F7;
+  font-size: 1rem;
+}
+
+/* Exchange Terms */
+.sk-terms-card {
+  border: 1px solid #F3F4F6;
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  background-color: #FFFFFF;
+}
+
+.sk-terms-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  color: #111827;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.sk-terms-icon {
+  color: #A855F7;
+}
+
+.sk-terms-text {
+  font-size: 0.875rem;
+  color: #4B5563;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Similar Skills styling matches Marketplace */
+.sk-similar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1.5rem;
+}
+
+.sk-view-all {
+  color: #A855F7;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sk-view-all:hover { text-decoration: underline; }
+
+.sk-similar-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.sk-sim-card {
+  height: 200px;
+  border-radius: 1rem;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+.sk-sim-card:hover { transform: translateY(-4px); }
+
+.sk-sim-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6;
+}
+
+.sk-sim-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1.25rem;
+}
+
+.sk-sim-title { font-weight: 700; font-size: 1rem; margin: 0 0 0.25rem 0;}
+.sk-sim-bottom { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem;}
+.sk-sim-author { color: #D1D5DB; }
+.sk-sim-rate { color: #FBBF24; font-weight: 600; }

@@ -1,0 +1,194 @@
+.admin-skill-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+.skill-info-card, .provider-details-card, .history-card-admin {
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.skill-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.skill-info-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.skill-price-text {
+  font-size: 14px;
+  color: #7C3AED;
+  font-weight: 600;
+}
+
+.status-badge-lg {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-badge-lg.active { background: #ECFDF5; color: #059669; }
+.status-badge-lg.pending { background: #FFFBEB; color: #D97706; }
+.status-badge-lg.inappropriate { background: #FEF2F2; color: #DC2626; }
+
+.skill-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 16px 0;
+  border-top: 1px solid #F3F4F6;
+  border-bottom: 1px solid #F3F4F6;
+  margin-bottom: 24px;
+}
+
+.meta-item label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6B7280;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.meta-item span {
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.skill-description-admin h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.skill-description-admin p {
+  font-size: 14px;
+  color: #4B5563;
+  line-height: 1.6;
+}
+
+/* Provider Card */
+.provider-details-card h3 {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6B7280;
+  letter-spacing: 0.05em;
+  margin-bottom: 16px;
+}
+
+.provider-profile-sm {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.provider-avatar-sm {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18px;
+  overflow: hidden;
+}
+
+.provider-avatar-sm img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.provider-info-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.provider-name-admin {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.provider-sub-text {
+  font-size: 12px;
+  color: #6B7280;
+  margin-bottom: 4px;
+}
+
+.view-profile-link {
+  font-size: 12px;
+  color: #7C3AED;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+/* History Card */
+.history-card-admin {
+  grid-column: 1;
+}
+
+.history-card-admin h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 20px;
+}
+
+.history-item-admin {
+  background: #F9FAFB;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.history-item-content {
+  position: relative;
+}
+
+.history-item-content strong {
+  display: block;
+  font-size: 14px;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.history-date {
+  font-size: 12px;
+  color: #9CA3AF;
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.history-item-content p {
+  font-size: 14px;
+  color: #6B7280;
+  font-style: italic;
+  margin-top: 8px;
+}
+
+/* Buttons */
+.btn-verify-mentor {
+  background-color: #7C3AED !important;
+  color: white !important;
+}
+
+.btn-verify-mentor:disabled {
+  background-color: #DDD !important;
+  cursor: not-allowed;
+}

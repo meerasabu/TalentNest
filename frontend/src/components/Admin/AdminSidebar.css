@@ -1,0 +1,147 @@
+/* Sidebar */
+.admin-sidebar {
+  width: 260px;
+  background-color: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-sidebar-header {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.5px;
+}
+
+.admin-logo-sub {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.admin-nav {
+  flex: 1;
+  padding: 16px;
+}
+
+.admin-nav-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  transition: all 0.2s;
+}
+
+.admin-nav-item:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.admin-nav-item.active {
+  background-color: #F5F3FF;
+  color: #7C3AED;
+  font-weight: 600;
+}
+
+.dropdown-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.nav-item-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dropdown-chevron {
+  transition: transform 0.3s ease;
+}
+
+.dropdown-chevron.open {
+  transform: rotate(180deg);
+}
+
+.admin-sub-nav {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out, opacity 0.3s ease;
+  opacity: 0;
+  background-color: #F9FAFB;
+  border-radius: 0 0 8px 8px;
+}
+
+.admin-sub-nav.show {
+  max-height: 200px;
+  opacity: 1;
+  padding: 4px 0;
+}
+
+.admin-sub-nav-item {
+  display: block;
+  padding: 8px 12px 8px 40px;
+  font-size: 13px;
+  color: #4B5563;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.admin-sub-nav-item:hover {
+  background-color: #F3F4F6;
+  color: #7C3AED;
+}
+
+.admin-sub-nav-item.active {
+  color: #7C3AED;
+  font-weight: 600;
+  background-color: #EEF2FF;
+}
+
+.admin-nav-item.active svg {
+  stroke: #7c3aed;
+}
+
+.admin-nav-item svg {
+  stroke: #6b7280;
+  flex-shrink: 0;
+}
+
+.admin-sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.logout-item {
+  color: #4b5563;
+}
+.logout-item:hover {
+  background-color: #fee2e2;
+  color: #ef4444;
+}
+.logout-item:hover svg {
+  stroke: #ef4444;
+}

@@ -1,0 +1,232 @@
+.admin-breadcrumb-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.breadcrumb-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.breadcrumb-nav h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.admin-profile-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-warn {
+  padding: 8px 16px;
+  background-color: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+}
+
+.btn-mark {
+  padding: 8px 16px;
+  background-color: #FFFBEB;
+  border: 1px solid #FEF3C7;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #D97706;
+  cursor: pointer;
+}
+
+.btn-mark:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Grid Layout */
+.admin-product-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.product-image-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid #F3F4F6;
+  padding: 24px;
+}
+
+.main-product-img {
+  width: 100%;
+  aspect-ratio: 4/3;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #F9FAFB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.main-product-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.img-placeholder-lg {
+  color: #9CA3AF;
+  font-size: 14px;
+}
+
+.product-info-card, .seller-details-card, .reports-card-admin {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid #F3F4F6;
+  padding: 24px;
+}
+
+.product-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.product-info-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.product-price-lg {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 24px;
+}
+
+.product-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #F3F4F6;
+  margin-bottom: 24px;
+}
+
+.meta-item label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.meta-item span {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.product-description-admin p {
+  font-size: 14px;
+  color: #6B7280;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Seller Card */
+.seller-details-card h3, .reports-card-admin h3 {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 16px 0;
+}
+
+.seller-profile-sm {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.seller-avatar-sm {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+}
+
+.seller-avatar-sm img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.seller-info-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.seller-name-admin {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.view-profile-link {
+  font-size: 12px;
+  color: #6B7280;
+  text-decoration: none;
+}
+
+.view-profile-link:hover {
+  color: #7C3AED;
+}
+
+/* Reports Card */
+.empty-reports-center {
+  padding: 32px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.empty-reports-center p {
+  font-size: 14px;
+  color: #9CA3AF;
+  margin-top: 12px;
+}
+
+.status-badge-lg {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge-lg.active { background-color: #ECFDF5; color: #059669; }
+.status-badge-lg.inappropriate { background-color: #FEF2F2; color: #DC2626; }
+.status-badge-lg.reported { background-color: #FFFBEB; color: #D97706; }
+.status-badge-lg.sold { background-color: #F3F4F6; color: #6B7280; }
