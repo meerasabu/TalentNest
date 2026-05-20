@@ -44,7 +44,7 @@
 
 | Layer | Technology |
 | :--- | :--- |
-| **Frontend** | React, Vite, Vanilla CSS, Axios, React Router |
+| **Frontend** | React, Vite, Tailwind CSS, Axios, React Router |
 | **Backend** | Node.js, Express.js |
 | **Database** | PostgreSQL |
 | **Authentication** | JWT (JSON Web Tokens) |
