@@ -1,8 +1,28 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import studentsCollaborating from '../../assets/students_collaborating.png';
 import './Home.css';
 
 const Home = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+    if (token && userStr && token !== 'undefined') {
+      try {
+        const user = JSON.parse(userStr);
+        if (user.role === 'admin') {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/index', { replace: true });
+        }
+      } catch (e) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+    }
+  }, [navigate]);
   return (
     <div className="home-container">
       {/* Navigation */}
@@ -47,7 +67,7 @@ const Home = () => {
       <section className="image-section">
         <div className="hero-image-wrapper">
           <img 
-            src="https://placehold.co/1200x600/E5E7EB/6B7280?text=Students+Collaborating+Prototype" 
+            src={studentsCollaborating} 
             alt="Students collaborating" 
             className="hero-img" 
           />

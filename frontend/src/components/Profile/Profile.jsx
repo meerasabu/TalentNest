@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import api from '../../api/axiosConfig';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
@@ -26,26 +26,84 @@ const Profile = () => {
   const [loadingSkills, setLoadingSkills] = useState(true);
   const [userServices, setUserServices] = useState([]);
   const [loadingServices, setLoadingServices] = useState(true);
+  const [activities, setActivities] = useState([]);
+  const [loadingActivities, setLoadingActivities] = useState(true);
+  
+  const [profileUser, setProfileUser] = useState(user);
+  const [userReviews, setUserReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(true);
+
+  // Quantity modal states
+  const [showQuantityModal, setShowQuantityModal] = useState(false);
+  const [showAllActivitiesModal, setShowAllActivitiesModal] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState(null);
+  const [quantityInput, setQuantityInput] = useState(1);
+
+  // Live clock for real-time "Xs ago" updates
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const ticker = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(ticker);
+  }, []);
+
+  const formatActivityTime = (timestamp, currentNow) => {
+    if (!timestamp) return 'Just now';
+    const date = new Date(timestamp);
+    const diffMs = (currentNow || now) - date;
+    
+    if (isNaN(diffMs) || diffMs < 0) return 'Just now';
+
+    const diffSecs = Math.floor(diffMs / 1000);
+    if (diffSecs < 60) return `${diffSecs}s ago`;
+
+    const diffMins = Math.floor(diffSecs / 60);
+    if (diffMins < 60) return `${diffMins}m ago`;
+
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+
+    const diffWeeks = Math.floor(diffDays / 7);
+    return `${diffWeeks}w ago`;
+  };
+
+  const formatJoinDate = (dateString) => {
+    if (!dateString) return 'Joined Aug 2022';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Joined Aug 2022';
+    const options = { month: 'short', year: 'numeric' };
+    return `Joined ${date.toLocaleDateString('en-US', options)}`;
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const uid = user?.id || 1;
-        const [prodRes, skillRes, servRes] = await Promise.all([
+        const [prodRes, skillRes, servRes, actRes, userRes, revRes] = await Promise.all([
           api.get(`/users/${uid}/products`),
           api.get(`/users/${uid}/skills`),
-          api.get(`/users/${uid}/services`)
+          api.get(`/users/${uid}/services`),
+          api.get(`/users/${uid}/activity`),
+          api.get(`/users/${uid}`),
+          api.get(`/reviews/user/${uid}`)
         ]);
         
         if (prodRes.data.success) setUserProducts(prodRes.data.products);
         if (skillRes.data.success) setUserSkills(skillRes.data.skills);
         if (servRes.data.success) setUserServices(servRes.data.services);
+        if (actRes.data.success) setActivities(actRes.data.activities);
+        if (userRes.data.success) setProfileUser(userRes.data.user);
+        if (revRes.data.success) setUserReviews(revRes.data.reviews);
       } catch (err) {
         console.error("Error fetching user data:", err);
       } finally {
         setLoadingProducts(false);
         setLoadingSkills(false);
         setLoadingServices(false);
+        setLoadingActivities(false);
+        setLoadingReviews(false);
       }
     };
     fetchUserData();
@@ -77,11 +135,28 @@ const Profile = () => {
   const handleUpdateStatus = async (id, type, newStatus) => {
     try {
       const endpoint = `/${type}/${id}/status`;
+      if (type === 'products' && newStatus === 'Available') {
+        setSelectedProductId(id);
+        const currentProd = userProducts.find(p => p.id === id);
+        setQuantityInput(currentProd ? (currentProd.quantity || 1) : 1);
+        setShowQuantityModal(true);
+        return;
+      }
+
       const res = await api.patch(endpoint, { status: newStatus });
       if (res.data.success) {
         // Update local state
         if (type === 'products') {
-          setUserProducts(userProducts.map(p => p.id === id ? { ...p, status: newStatus } : p));
+          setUserProducts(userProducts.map(p => {
+            if (p.id === id) {
+              return { 
+                ...p, 
+                status: newStatus, 
+                available_quantity: 0
+              };
+            }
+            return p;
+          }));
         } else if (type === 'skills') {
           setUserSkills(userSkills.map(s => s.id === id ? { ...s, status: newStatus } : s));
         } else if (type === 'services') {
@@ -90,6 +165,37 @@ const Profile = () => {
       }
     } catch (err) {
       console.error(`Error updating ${type} status:`, err);
+      alert('Failed to update status.');
+    }
+  };
+
+  const handleQuantitySubmit = async (e) => {
+    e.preventDefault();
+    const qty = parseInt(quantityInput, 10);
+    if (isNaN(qty) || qty <= 0) {
+      alert("Please enter a valid positive quantity.");
+      return;
+    }
+    
+    try {
+      const endpoint = `/products/${selectedProductId}/status`;
+      const res = await api.patch(endpoint, { status: 'Available', quantity: qty });
+      if (res.data.success) {
+        setUserProducts(userProducts.map(p => {
+          if (p.id === selectedProductId) {
+            return { 
+              ...p, 
+              status: 'Available', 
+              available_quantity: qty,
+              quantity: qty
+            };
+          }
+          return p;
+        }));
+      }
+      setShowQuantityModal(false);
+    } catch (err) {
+      console.error(`Error updating product status:`, err);
       alert('Failed to update status.');
     }
   };
@@ -195,10 +301,12 @@ const Profile = () => {
                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                          Edit Item
                        </button>
-                       <button className="dropdown-item" onClick={() => handleUpdateStatus(skill.id, 'skills', skill.status === 'Completed' ? 'Active' : 'Completed')}>
-                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                         {skill.status === 'Completed' ? 'Make Active' : 'Mark Completed'}
-                       </button>
+                       {(skill.status === 'Active' || skill.status === 'Completed') && (
+                         <button className="dropdown-item" onClick={() => handleUpdateStatus(skill.id, 'skills', skill.status === 'Completed' ? 'Active' : 'Completed')}>
+                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                           {skill.status === 'Completed' ? 'Make Active' : 'Mark Completed'}
+                         </button>
+                       )}
                        <button className="dropdown-item delete" onClick={() => handleDeleteItem(skill.id, 'skills')}>
                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                          Delete
@@ -207,10 +315,19 @@ const Profile = () => {
                    )}
                  </div>
                  <span className="sk-cat">{skill.category}</span>
+                 {skill.status === 'Rejected' && skill.rejection_reason && (
+                   <div className="sk-rejection-reason" style={{ fontSize: '0.72rem', color: '#dc2626', marginTop: '6px', background: '#fee2e2', padding: '6px 10px', borderRadius: '6px', borderLeft: '3px solid #dc2626', lineHeight: '1.3' }} onClick={(e) => e.stopPropagation()}>
+                     <strong>Reason:</strong> {skill.rejection_reason}
+                   </div>
+                 )}
                  <div className="sk-btm-row">
                    <span className="exc-lbl">⚡ {skill.charge_type || 'Exchange'}</span>
                    {skill.status === 'Active' ? (
                      <span className="act-pill">ACTIVE</span>
+                   ) : skill.status === 'Pending Verification' ? (
+                     <span className="pending-pill">PENDING VERIFICATION</span>
+                   ) : skill.status === 'Rejected' ? (
+                     <span className="rejected-pill">REJECTED</span>
                    ) : (
                      <span className="cmpt-pill">{skill.status?.toUpperCase() || 'COMPLETED'}</span>
                    )}
@@ -285,43 +402,39 @@ const Profile = () => {
     if (activeTab === 'reviews') {
       return (
         <div className="prof-reviews-list">
-          <div className="prof-rev-box">
-             <div className="prof-rev-header">
-               <div className="rev-user-grp">
-                 <img src="https://placehold.co/40x40" alt="Reviewer" className="rev-ava" />
-                 <div className="rev-user-txt">
-                   <h4>Emma Wilson</h4>
-                   <div className="rev-stars">
-                     ⭐ ⭐ ⭐ ⭐ ⭐ <span>1 week ago</span>
+          {loadingReviews ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#6B7280' }}>Loading reviews...</div>
+          ) : userReviews.length > 0 ? (
+            userReviews.map((rev) => (
+              <div key={rev.id} className="prof-rev-box">
+                 <div className="prof-rev-header">
+                   <div className="rev-user-grp">
+                     {rev.profile_image ? (
+                       <img src={`http://localhost:5000${rev.profile_image}`} alt="Reviewer" className="rev-ava" />
+                     ) : (
+                       <img src="https://placehold.co/40x40" alt="Reviewer" className="rev-ava" />
+                     )}
+                     <div className="rev-user-txt">
+                       <h4>{rev.first_name} {rev.last_name}</h4>
+                       <div className="rev-stars">
+                         {Array.from({ length: rev.rating }).map((_, i) => '⭐ ')}
+                         <span>{formatActivityTime(rev.created_at)}</span>
+                       </div>
+                     </div>
+                   </div>
+                   <div className="rev-chk-pill">
+                     <span className="rev-ver-chk">✔ Verified Interaction</span>
+                     <span className="sub-act-lbl">Completed interaction</span>
                    </div>
                  </div>
-               </div>
-               <div className="rev-chk-pill">
-                 <span className="rev-ver-chk">✔ Verified Interaction</span>
-                 <span className="sub-act-lbl">Completed interaction</span>
-               </div>
-             </div>
-             <p className="rev-desc">Super smooth transaction. The product was exactly as described and we met up right on campus.</p>
-          </div>
-
-          <div className="prof-rev-box">
-             <div className="prof-rev-header">
-               <div className="rev-user-grp">
-                 <img src="https://placehold.co/40x40" alt="Reviewer" className="rev-ava" />
-                 <div className="rev-user-txt">
-                   <h4>David Martinez</h4>
-                   <div className="rev-stars">
-                     ⭐ ⭐ ⭐ ⭐ ⭐ <span>1 month ago</span>
-                   </div>
-                 </div>
-               </div>
-               <div className="rev-chk-pill">
-                 <span className="rev-ver-chk">✔ Verified Interaction</span>
-                 <span className="sub-act-lbl">Completed interaction</span>
-               </div>
-             </div>
-             <p className="rev-desc">Great tutor! Explained everything very clearly.</p>
-          </div>
+                 <p className="rev-desc">{rev.review_text}</p>
+              </div>
+            ))
+          ) : (
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#6B7280' }}>
+              No reviews received yet.
+            </div>
+          )}
         </div>
       );
     }
@@ -372,10 +485,10 @@ const Profile = () => {
                    </div>
                    
                    <div className="prof-lbl-row">
-                      <span className="prof-icon-txt">⭐ 4.9 <span className="light-txt">(12 reviews)</span></span>
-                      <span className="prof-icon-txt">📍 {user.campusLocation || 'Campus'}</span>
-                      <span className="prof-icon-txt">📅 Joined Aug 2022</span>
-                   </div>
+                       <span className="prof-icon-txt">⭐ {profileUser.reviewCount > 0 ? profileUser.rating : '0.0'} <span className="light-txt">({profileUser.reviewCount || 0} reviews)</span></span>
+                       <span className="prof-icon-txt">📍 {profileUser.campusLocation || 'Campus'}</span>
+                       <span className="prof-icon-txt">📅 {formatJoinDate(profileUser.createdAt)}</span>
+                    </div>
 
                    <p className="prof-bio">{user.bio || "No bio added yet."}</p>
                 </div>
@@ -401,51 +514,144 @@ const Profile = () => {
               {/* Fixed Right Activity Bar matching UI parameters neatly */}
               <div className="prof-right-pane">
                  <div className="prof-activity-card">
-                    <h3 className="act-header"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg> Activity</h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                      <h3 className="act-header" style={{ margin: 0 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg> Activity</h3>
+                      {activities.length > 1 && (
+                        <button type="button" className="view-all-act-btn" onClick={() => setShowAllActivitiesModal(true)}>
+                          View All
+                        </button>
+                      )}
+                    </div>
                     
                     <div className="timeline-flow">
-                       <div className="timeline-item">
-                         <div className="tl-dot tl-grn"></div>
-                         <div className="tl-txt">
-                           <h4>You reviewed a service/product</h4>
-                           <span>Just now</span>
-                         </div>
-                       </div>
-                       
-                       <div className="timeline-item">
-                         <div className="tl-line"></div>
-                         <div className="tl-dot tl-purp"></div>
-                         <div className="tl-txt">
-                           <h4>Listed a new product</h4>
-                           <span>2h ago</span>
-                         </div>
-                       </div>
-                       
-                       <div className="timeline-item">
-                         <div className="tl-line"></div>
-                         <div className="tl-dot tl-gry"></div>
-                         <div className="tl-txt">
-                           <h4>Updated profile bio</h4>
-                           <span>1d ago</span>
-                         </div>
-                       </div>
+                       {loadingActivities ? (
+                         <div style={{ color: '#6B7280', fontSize: '0.85rem' }}>Loading activity...</div>
+                       ) : activities.length > 0 ? (
+                         (() => {
+                           const act = activities[0];
+                           let dotClass = 'tl-gry';
+                           if (act.activity_type === 'login') {
+                             dotClass = 'tl-grn';
+                           } else if (act.activity_type === 'review_written' || act.activity_type === 'signup') {
+                             dotClass = 'tl-grn';
+                           } else if (act.activity_type === 'listing_create') {
+                             dotClass = 'tl-purp';
+                           } else if (act.activity_type.startsWith('order')) {
+                             dotClass = 'tl-blu';
+                           }
 
-                       <div className="timeline-item">
-                         <div className="tl-line"></div>
-                         <div className="tl-dot tl-blu"></div>
-                         <div className="tl-txt">
-                           <h4>Completed a service</h4>
-                           <span>1w ago</span>
+                           return (
+                             <div className="timeline-item" onClick={() => setShowAllActivitiesModal(true)} style={{ cursor: 'pointer', paddingBottom: 0 }}>
+                               <div className={`tl-dot ${dotClass}`}></div>
+                               <div className="tl-txt">
+                                 <h4>{act.details}</h4>
+                                 <span>{formatActivityTime(act.created_at, now)}</span>
+                               </div>
+                             </div>
+                           );
+                         })()
+                       ) : (
+                         <div style={{ color: '#6B7280', fontSize: '0.85rem', padding: '0.5rem 0' }}>
+                           No recent activity found.
                          </div>
-                       </div>
+                       )}
                     </div>
                  </div>
               </div>
 
-           </div>
+            </div>
 
-        </div>
+         </div>
       </main>
+
+      {showQuantityModal && (() => {
+        const selectedProduct = userProducts.find(p => p.id === selectedProductId);
+        return (
+          <div className="qty-modal-overlay">
+            <div className="qty-modal-card">
+              <div className="qty-modal-header">
+                <h3>Make Product Available</h3>
+                {selectedProduct && (
+                  <span className="qty-modal-prod-name">{selectedProduct.title}</span>
+                )}
+              </div>
+              <form onSubmit={handleQuantitySubmit}>
+                <div className="qty-form-group">
+                  <label htmlFor="quantityInput">Enter available quantity for this product:</label>
+                  <input
+                    type="number"
+                    id="quantityInput"
+                    className="qty-input-field"
+                    min="1"
+                    value={quantityInput}
+                    onChange={(e) => setQuantityInput(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="qty-modal-actions">
+                  <button
+                    type="button"
+                    className="qty-btn qty-btn-cancel"
+                    onClick={() => setShowQuantityModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="qty-btn qty-btn-submit">
+                    Confirm
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
+
+      {showAllActivitiesModal && (
+        <div className="activities-modal-overlay" onClick={() => setShowAllActivitiesModal(false)}>
+          <div className="activities-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="activities-modal-header">
+              <h3>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '8px' }}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                Activity History
+              </h3>
+              <button type="button" className="activities-modal-close" onClick={() => setShowAllActivitiesModal(false)} title="Close">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="activities-modal-body">
+              <div className="timeline-flow">
+                 {activities.map((act, index) => {
+                   let dotClass = 'tl-gry';
+                   if (act.activity_type === 'login') {
+                     dotClass = 'tl-grn';
+                   } else if (act.activity_type === 'review_written' || act.activity_type === 'signup') {
+                     dotClass = 'tl-grn';
+                   } else if (act.activity_type === 'listing_create') {
+                     dotClass = 'tl-purp';
+                   } else if (act.activity_type.startsWith('order')) {
+                     dotClass = 'tl-blu';
+                   }
+
+                   return (
+                     <div key={index} className="timeline-item">
+                       {index > 0 && <div className="tl-line"></div>}
+                       <div className={`tl-dot ${dotClass}`}></div>
+                       <div className="tl-txt">
+                         <h4>{act.details}</h4>
+                         <span>{formatActivityTime(act.created_at, now)}</span>
+                       </div>
+                     </div>
+                   );
+                 })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

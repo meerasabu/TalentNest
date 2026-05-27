@@ -8,7 +8,13 @@ import './AdminStudents.css';
 const AdminStudents = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const user = location.state?.user || JSON.parse(localStorage.getItem('user'));
+  const user = React.useMemo(() => {
+    try {
+      return location.state?.user || JSON.parse(localStorage.getItem('user'));
+    } catch (e) {
+      return null;
+    }
+  }, [location.state?.user]);
   
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
@@ -37,18 +43,20 @@ const AdminStudents = () => {
   
   const statuses = ['All', 'Active', 'Suspended', 'Warned'];
 
+  const userRole = user?.role;
+
   // Route protection
   useEffect(() => {
-    if (!user || user.role !== 'admin') {
+    if (!userRole || userRole !== 'admin') {
       navigate('/login');
     }
-  }, [user, navigate]);
+  }, [userRole, navigate]);
 
   useEffect(() => {
-    if (user && user.role === 'admin') {
+    if (userRole === 'admin') {
       fetchStudents();
     }
-  }, [user]);
+  }, [userRole]);
 
   const fetchStudents = async () => {
     try {

@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import api from '../../api/axiosConfig';
 import '../Dashboard/Index.css'; 
 import './EditProfile.css';
 import Header from '../Common/Header';
+import Sidebar from '../Common/Sidebar';
 
 const EditProfile = () => {
     const navigate = useNavigate();
@@ -129,50 +130,7 @@ const EditProfile = () => {
     return (
         <div className="dashboard-container">
             {/* Sidebar Mapping */}
-            <aside className="dashboard-sidebar">
-                <div className="sidebar-header" onClick={() => navigate('/index', { state: { user } })} style={{cursor: 'pointer'}}>
-                    <div className="sidebar-logo-icon">T</div>
-                    <span className="sidebar-logo-text">TalentNest.</span>
-                </div>
-
-                <nav className="sidebar-nav">
-                    <div className="nav-section">
-                        <h4 className="nav-heading">MENU</h4>
-                        <ul className="nav-list">
-                            <li className="nav-item" onClick={() => navigate('/index', { state: { user } })} style={{cursor: 'pointer'}}>Overview</li>
-                            <li className="nav-item" onClick={() => navigate('/marketplace', { state: { user } })} style={{cursor: 'pointer'}}>Marketplace</li>
-                            <li className="nav-item" onClick={() => navigate('/skills', { state: { user } })} style={{cursor: 'pointer'}}>Skills</li>
-                            <li className="nav-item" onClick={() => navigate('/services', { state: { user } })} style={{cursor: 'pointer'}}>Services</li>
-                            <li className="nav-item" onClick={() => navigate('/orders', { state: { user } })} style={{cursor: 'pointer'}}>Orders</li>
-                        </ul>
-                    </div>
-                    <div className="nav-section">
-                        <h4 className="nav-heading">PERSONAL</h4>
-                        <ul className="nav-list">
-                            <li className="nav-item active" onClick={() => navigate('/profile', { state: { user } })} style={{cursor: 'pointer'}}>My Profile</li>
-                            <li className="nav-item" onClick={() => navigate('/wishlist', { state: { user } })} style={{cursor: 'pointer'}}>Wishlist</li>
-                            <li className="nav-item" onClick={() => navigate('/chat', { state: { user } })} style={{cursor: 'pointer'}}>Messages</li>
-              <li className="nav-item" onClick={() => navigate('/notifications', { state: { user } })} style={{cursor: 'pointer'}}>Notifications</li>
-                            <li className="nav-item text-danger" style={{cursor:'pointer'}} onClick={() => {
-                                localStorage.removeItem('user');
-                                localStorage.removeItem('token');
-                                navigate('/');
-                            }}>
-                                <svg className="nav-icon logout-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                                Logout
-                            </li>
-                        </ul>
-                    </div>
-                </nav>
-
-                <div className="sidebar-user-footer">
-                    <img src={profileImgPreview} alt="Profile" className="user-avatar" />
-                    <div className="user-details">
-                        <span className="user-name">{user.firstName} {user.lastName || ''}</span>
-                        <span className="user-handle">{handlePrefix}</span>
-                    </div>
-                </div>
-            </aside>
+            <Sidebar user={user} handlePrefix={handlePrefix} />
 
             <main className="dashboard-main edit-prof-main">
                 <Header user={user} />

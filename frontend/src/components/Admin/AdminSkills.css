@@ -113,8 +113,8 @@
 }
 
 .status-badge.active { background-color: #ECFDF5; color: #059669; }
-.status-badge.pending { background-color: #FFFBEB; color: #D97706; }
-.status-badge.inappropriate { background-color: #FEF2F2; color: #DC2626; }
+.status-badge.pending, .status-badge.pending-verification { background-color: #FFFBEB; color: #D97706; }
+.status-badge.inappropriate, .status-badge.rejected { background-color: #FEF2F2; color: #DC2626; }
 
 .action-dropdown-wrapper {
   position: relative;

@@ -20,6 +20,8 @@ const ProductDetails = () => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [similarProducts, setSimilarProducts] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(true);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -35,6 +37,21 @@ const ProductDetails = () => {
       }
     };
     fetchProduct();
+  }, [id]);
+
+  // Fetch real reviews for this product
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const res = await api.get(`/reviews/product/${id}`);
+        if (res.data.success) setReviews(res.data.reviews);
+      } catch (err) {
+        console.error('Error fetching product reviews:', err);
+      } finally {
+        setLoadingReviews(false);
+      }
+    };
+    fetchReviews();
   }, [id]);
 
   useEffect(() => {
@@ -74,6 +91,22 @@ const ProductDetails = () => {
     }
   };
 
+  const handleNotifyMe = async () => {
+    try {
+      const res = await api.post(`/products/${id}/notify`);
+      if (res.data.success) {
+        alert('You will be notified when this product is back in stock!');
+        setProduct(prev => ({
+          ...prev,
+          hasRequestedNotification: true
+        }));
+      }
+    } catch (err) {
+      console.error('Error requesting restock notification:', err);
+      alert(err.response?.data?.message || 'Failed to request notification.');
+    }
+  };
+
   if (loading) {
     return <div className="dashboard-container" style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>Loading product details...</div>;
   }
@@ -101,6 +134,13 @@ const ProductDetails = () => {
              <div className="back-nav-pd" onClick={() => navigate('/marketplace', { state: { user } })} title="Go Back">
                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
              </div>
+
+             { (product.status === 'Suspended' || product.seller_account_status === 'Suspended') && (
+               <div className="suspension-warning-banner">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                 <span>This product or its seller has been temporarily suspended by an administrator. Purchases and interactions are disabled.</span>
+               </div>
+             )}
 
              {/* Top Stage Grid */}
              <div className="details-stage-grid">
@@ -135,46 +175,101 @@ const ProductDetails = () => {
                  </div>
 
                  <h1 className="stage-title">{product.title}</h1>
-                 <div className="stage-price-row">
-                   <span className="current-price">₹{product.price}</span>
-                 </div>
+                 <div className="prod-details-rating" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '1.25rem', fontSize: '0.9rem', color: '#4B5563' }}>
+                    <span style={{ color: '#FBBF24' }}>⭐</span>
+                    <strong style={{ color: '#111827' }}>
+                      {reviews.length > 0 
+                        ? (reviews.reduce((sum, r) => sum + parseFloat(r.rating), 0) / reviews.length).toFixed(1) 
+                        : (product.rating ? parseFloat(product.rating).toFixed(1) : '0.0')}
+                    </strong>
+                    <span style={{ color: '#6B7280' }}>
+                      ({reviews.length > 0 ? reviews.length : (product.reviews || 0)} { (reviews.length > 0 ? reviews.length : (product.reviews || 0)) === 1 ? 'Review' : 'Reviews' })
+                    </span>
+                  </div>
+                  <div className="stage-price-row">
+                    <span className="current-price">₹{product.price}</span>
+                  </div>
 
-                 <p className="stage-desc">
-                   {product.description}
-                 </p>
-                 
+                  <p className="stage-desc">
+                    {product.description}
+                  </p>
+                  
+                  <div className="stage-action-row">
+                    {(product.status === 'Suspended' || product.seller_account_status === 'Suspended') ? (
+                      <button 
+                         className="btn-order" 
+                         disabled 
+                         style={{
+                           backgroundColor: '#EF4444',
+                           color: 'white',
+                           opacity: 0.7, 
+                           cursor: 'not-allowed'
+                         }}
+                       >
+                        Action Disabled (Suspended)
+                      </button>
+                    ) : (product.available_quantity === 0 || product.status === 'Sold') ? (
+                      <button 
+                         className="btn-order" 
+                         onClick={handleNotifyMe} 
+                         disabled={product.hasRequestedNotification} 
+                         style={{
+                           backgroundColor: product.hasRequestedNotification ? '#E5E7EB' : '#111827',
+                           color: product.hasRequestedNotification ? '#9CA3AF' : 'white',
+                           opacity: 1, 
+                           cursor: product.hasRequestedNotification ? 'not-allowed' : 'pointer'
+                         }}
+                       >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg> 
+                        {product.hasRequestedNotification ? 'Notification Request Sent' : 'Notify Me'}
+                      </button>
+                    ) : (
+                      <button 
+                         className="btn-order" 
+                         onClick={handleOrderRequest} 
+                       >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg> 
+                        Send Order Request
+                      </button>
+                    )}
+                  </div>
 
+                  <ul className="stage-bullets">
+                    <li>Condition: {product.condition}</li>
+                    <li>Listed on: {new Date(product.created_at).toLocaleDateString()}</li>
+                  </ul>
 
-                 <div className="stage-action-row">
-                   <button 
-                      className="btn-order" 
-                      onClick={handleOrderRequest} 
-                      disabled={product.available_quantity === 0 || product.status === 'Sold'} 
-                      style={{
-                        opacity: (product.available_quantity === 0 || product.status === 'Sold') ? 0.5 : 1, 
-                        cursor: (product.available_quantity === 0 || product.status === 'Sold') ? 'not-allowed' : 'pointer'
-                      }}
-                    >
-                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg> 
-                     Send Order Request
-                   </button>
-                 </div>
-
-                 <ul className="stage-bullets">
-                   <li>Condition: {product.condition}</li>
-                   <li>Listed on: {new Date(product.created_at).toLocaleDateString()}</li>
-                 </ul>
-
-                 <div className="seller-box">
-                   <div className="seller-profile-group">
-                     <img src={`https://placehold.co/40x40/333/fff?text=${product.first_name?.[0] || 'U'}${product.last_name?.[0] || ''}`} alt={product.first_name} className="seller-avatar" />
-                     <div className="seller-name-stack">
-                       <span className="sn-title">{product.first_name} {product.last_name}</span>
-                       <span className="sn-rates"><span className="star-icon">★</span> <strong className="ora-text">Seller</strong></span>
-                     </div>
-                   </div>
-                   <span className="seller-chevron">›</span>
-                 </div>
+                  <div className="seller-box">
+                    <div className="seller-profile-group">
+                      {product.profile_image ? (
+                        <img src={`http://localhost:5000${product.profile_image}`} alt={product.first_name} className="seller-avatar" style={{ objectFit: 'cover' }} />
+                      ) : (
+                        <div 
+                          className="seller-avatar-fallback" 
+                          style={{ 
+                            width: '48px', 
+                            height: '48px', 
+                            borderRadius: '50%', 
+                            backgroundColor: '#4F46E5', 
+                            color: 'white', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            fontSize: '16px', 
+                            fontWeight: 'bold',
+                            marginRight: '16px'
+                          }}
+                        >
+                          {(product.first_name?.[0] || 'U').toUpperCase()}{(product.last_name?.[0] || '').toUpperCase()}
+                        </div>
+                      )}
+                      <div className="seller-name-stack">
+                        <span className="sn-title">{product.first_name} {product.last_name}</span>
+                        <span className="sn-rates"><span className="star-icon">★</span> <strong className="ora-text">Seller</strong></span>
+                      </div>
+                    </div>
+                    <span className="seller-chevron">›</span>
+                  </div>
 
                  <div className="stage-traits-row">
                    <div className="trait-box">
@@ -198,69 +293,116 @@ const ProductDetails = () => {
 
              {/* Middle Section: Reviews */}
              <div className="pd-section-wrapper">
-               <h2 className="pd-section-title">Reviews & Ratings</h2>
-               
-               {/* Analysis Block */}
-               <div className="reviews-analysis-box">
-                 <div className="raa-left">
-                   <div className="raa-num">4.5</div>
-                   <div className="raa-stars">
-                     <span className="star-full">★</span><span className="star-full">★</span><span className="star-full">★</span><span className="star-full">★</span><span className="star-half">★</span>
-                   </div>
-                   <div className="raa-desc">2 reviews</div>
-                 </div>
-                 
-                 <div className="raa-right">
-                   {[
-                     {st: 5, pct: '60%', w: '60%'},
-                     {st: 4, pct: '30%', w: '30%'},
-                     {st: 3, pct: '10%', w: '10%'},
-                     {st: 2, pct: '10%', w: '10%'},
-                     {st: 1, pct: '10%', w: '10%'}
-                   ].map(row => (
-                      <div key={row.st} className="raa-row">
-                        <span className="raa-rlab">{row.st} ★</span>
-                        <div className="raa-track"><div className="raa-fill" style={{ width: row.w }}></div></div>
-                        <span className="raa-rpct">{row.pct}</span>
-                      </div>
-                   ))}
-                 </div>
-               </div>
+               <h2 className="pd-section-title">Reviews &amp; Ratings</h2>
 
-               {/* Singular Reviews mapping natively */}
-               <div className="review-card">
-                 <div className="rev-head">
-                   <div className="rev-user-grp">
-                     <img src="https://placehold.co/40x40/666/fff?text=SJ" alt="Sarah" className="rev-avatar" />
-                     <div className="rev-name-stack">
-                       <span className="rn-name">Sarah Johnson</span>
-                       <span className="rn-sub"><span className="star-icon">★</span><span className="star-icon">★</span><span className="star-icon">★</span><span className="star-icon">★</span><span className="star-icon">★</span> 2 days ago</span>
-                     </div>
-                   </div>
-                   <div className="rev-verified-block">
-                     <span className="rv-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Verified Interaction</span>
-                     <span className="rv-desc">Completed order</span>
-                   </div>
+               {loadingReviews ? (
+                 <div style={{ color: '#6B7280', padding: '1rem 0', fontSize: '0.9rem' }}>Loading reviews...</div>
+               ) : reviews.length === 0 ? (
+                 <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#9CA3AF', fontSize: '0.95rem' }}>
+                   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="1.5" style={{ marginBottom: '0.75rem' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                   <div>No reviews yet for this product.</div>
+                   <div style={{ fontSize: '0.82rem', marginTop: '4px', color: '#CBD5E1' }}>Be the first to buy and review!</div>
                  </div>
-                 <p className="rev-msg">Great product! Exactly as described. Met on campus and the transaction was smooth.</p>
-               </div>
+               ) : (() => {
+                 const avgRating = reviews.reduce((sum, r) => sum + parseFloat(r.rating), 0) / reviews.length;
+                 const starDist = [5, 4, 3, 2, 1].map(s => ({
+                   st: s,
+                   count: reviews.filter(r => Math.round(parseFloat(r.rating)) === s).length
+                 }));
+                 return (
+                   <>
+                     {/* Analysis Block */}
+                     <div className="reviews-analysis-box">
+                       <div className="raa-left">
+                         <div className="raa-num">{avgRating.toFixed(1)}</div>
+                         <div className="raa-stars">
+                           {[1,2,3,4,5].map(s => (
+                             <span key={s} className={s <= Math.round(avgRating) ? 'star-full' : 'star-empty'}>★</span>
+                           ))}
+                         </div>
+                         <div className="raa-desc">{reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}</div>
+                       </div>
+                       <div className="raa-right">
+                         {starDist.map(row => {
+                           const pct = reviews.length > 0 ? Math.round((row.count / reviews.length) * 100) : 0;
+                           return (
+                             <div key={row.st} className="raa-row">
+                               <span className="raa-rlab">{row.st} ★</span>
+                               <div className="raa-track"><div className="raa-fill" style={{ width: `${pct}%` }}></div></div>
+                               <span className="raa-rpct">{pct}%</span>
+                             </div>
+                           );
+                         })}
+                       </div>
+                     </div>
 
-               <div className="review-card">
-                 <div className="rev-head">
-                   <div className="rev-user-grp">
-                     <img src="https://placehold.co/40x40/999/fff?text=DL" alt="David" className="rev-avatar" />
-                     <div className="rev-name-stack">
-                       <span className="rn-name">David Lee</span>
-                       <span className="rn-sub"><span className="star-icon">★</span><span className="star-icon">★</span><span className="star-icon">★</span><span className="star-icon">★</span><span className="star-empty">★</span> 1 week ago</span>
-                     </div>
-                   </div>
-                   <div className="rev-verified-block">
-                     <span className="rv-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Verified Interaction</span>
-                     <span className="rv-desc">Completed order</span>
-                   </div>
-                 </div>
-                 <p className="rev-msg">Good quality, minor wear but nothing significant. Would buy from this seller again.</p>
-               </div>
+                     {/* Real Review Cards */}
+                     {reviews.map((rev) => {
+                       const initials = `${rev.first_name?.[0] || ''}${rev.last_name?.[0] || ''}`;
+                       const timeAgo = (() => {
+                         const diff = Date.now() - new Date(rev.created_at);
+                         const s = Math.floor(diff / 1000);
+                         if (s < 60) return `${s}s ago`;
+                         const m = Math.floor(s / 60);
+                         if (m < 60) return `${m}m ago`;
+                         const h = Math.floor(m / 60);
+                         if (h < 24) return `${h}h ago`;
+                         const d = Math.floor(h / 24);
+                         if (d < 7) return `${d}d ago`;
+                         return `${Math.floor(d / 7)}w ago`;
+                       })();
+                       const stars = Math.round(parseFloat(rev.rating));
+                       return (
+                         <div key={rev.id} className="review-card">
+                           <div className="rev-head">
+                             <div className="rev-user-grp">
+                               {rev.profile_image ? (
+                                 <img src={`http://localhost:5000${rev.profile_image}`} alt={rev.first_name} className="rev-avatar" style={{ objectFit: 'cover' }} />
+                               ) : (
+                                 <img src={`https://placehold.co/40x40/6366f1/fff?text=${initials}`} alt={rev.first_name} className="rev-avatar" />
+                               )}
+                               <div className="rev-name-stack">
+                                 <span className="rn-name">{rev.first_name} {rev.last_name}</span>
+                                 <span className="rn-sub">
+                                   {[1,2,3,4,5].map(s => (
+                                     <span key={s} className={s <= stars ? 'star-icon' : 'star-empty'}>★</span>
+                                   ))}
+                                   &nbsp;{timeAgo}
+                                 </span>
+                               </div>
+                             </div>
+                             <div className="rev-verified-block">
+                               <span className="rv-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg> Verified Purchase</span>
+                               <span className="rv-desc">Completed order</span>
+                             </div>
+                           </div>
+                           {rev.review_text && <p className="rev-msg">{rev.review_text}</p>}
+                           {/* Sub-ratings if present */}
+                           {(rev.teaching_rating || rev.outcome_rating || rev.communication_rating) && (
+                             <div style={{ display: 'flex', gap: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
+                               {rev.teaching_rating && (
+                                 <span style={{ fontSize: '0.78rem', background: '#EFF6FF', color: '#2563EB', padding: '3px 10px', borderRadius: '999px', fontWeight: '600' }}>
+                                   Quality: {parseFloat(rev.teaching_rating).toFixed(1)}★
+                                 </span>
+                               )}
+                               {rev.outcome_rating && (
+                                 <span style={{ fontSize: '0.78rem', background: '#F0FDF4', color: '#16A34A', padding: '3px 10px', borderRadius: '999px', fontWeight: '600' }}>
+                                   Value: {parseFloat(rev.outcome_rating).toFixed(1)}★
+                                 </span>
+                               )}
+                               {rev.communication_rating && (
+                                 <span style={{ fontSize: '0.78rem', background: '#FFF7ED', color: '#EA580C', padding: '3px 10px', borderRadius: '999px', fontWeight: '600' }}>
+                                   Seller Comm: {parseFloat(rev.communication_rating).toFixed(1)}★
+                                 </span>
+                               )}
+                             </div>
+                           )}
+                         </div>
+                       );
+                     })}
+                   </>
+                 );
+               })()}
              </div>
 
              {/* Bottom Section: Similar items dynamic */}

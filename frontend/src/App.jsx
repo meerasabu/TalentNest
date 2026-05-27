@@ -16,6 +16,7 @@ import ServiceDetails from './components/ServiceDetails/ServiceDetails';
 import Orders from './components/Orders/Orders';
 import Profile from './components/Profile/Profile';
 import EditProfile from './components/EditProfile/EditProfile';
+import Settings from './components/Settings/Settings';
 import Wishlist from './components/Wishlist/Wishlist';
 import Notifications from './components/Notifications/Notifications';
 import Messages from './components/Messages/Messages';
@@ -33,15 +34,19 @@ import AdminOrders from './components/Admin/AdminOrders';
 import AdminOrderDetail from './components/Admin/AdminOrderDetail';
 import ChatModeration from './components/Admin/ChatModeration';
 import AdminChatReview from './components/Admin/AdminChatReview';
+import AdminVerification from './components/Admin/AdminVerification';
+import AdminReports from './components/Admin/AdminReports';
 import { NotificationProvider } from './context/NotificationContext';
+import { PresenceProvider } from './context/PresenceContext';
 
 const About = () => <div style={{ padding: '2rem' }}><h1>About TalentNest</h1><p>A campus ecosystem for student talent.</p></div>;
 
 function App() {
   return (
     <Router>
-      <NotificationProvider>
-        <Routes>
+      <PresenceProvider>
+        <NotificationProvider>
+          <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/students" element={<AdminStudents />} />
@@ -56,6 +61,8 @@ function App() {
           <Route path="/admin/orders/:id" element={<AdminOrderDetail />} />
           <Route path="/admin/chat" element={<ChatModeration />} />
           <Route path="/admin/chat/:id" element={<AdminChatReview />} />
+          <Route path="/admin/verification" element={<AdminVerification />} />
+          <Route path="/admin/reports" element={<AdminReports />} />
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
@@ -74,13 +81,15 @@ function App() {
           <Route path="/orders" element={<Orders />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/edit-profile" element={<EditProfile />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/chat" element={<Messages />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/search" element={<SearchResults />} />
-        </Routes>
-      </NotificationProvider>
+          </Routes>
+        </NotificationProvider>
+      </PresenceProvider>
     </Router>
   );
 }

@@ -19,6 +19,10 @@ module.exports = (io) => {
     }
   });
 
+  // In-memory presence map: userId -> Set of socketIds
+  // Handles multi-tab: user stays online as long as ≥1 socket is connected
+  const presenceMap = new Map();
+
   io.on('connection', (socket) => {
     console.log(`User connected to WebSocket: ${socket.id} (User ID: ${socket.user?.id})`);
 
@@ -28,6 +32,29 @@ module.exports = (io) => {
       if (socket.user && socket.user.id === parsedUserId) {
         socket.join(`user_${parsedUserId}`);
         console.log(`Socket ${socket.id} securely joined room user_${parsedUserId}`);
+
+        // --- Presence: register this socket ---
+        if (!presenceMap.has(parsedUserId)) {
+          presenceMap.set(parsedUserId, new Set());
+        }
+        const wasOffline = presenceMap.get(parsedUserId).size === 0;
+        presenceMap.get(parsedUserId).add(socket.id);
+
+        // Tag socket with its userId for cleanup on disconnect
+        socket.presenceUserId = parsedUserId;
+
+        // Broadcast to ALL connected clients that this user came online
+        // (only emit if they were previously offline — avoids noise on multi-tab)
+        if (wasOffline) {
+          io.emit('user_online', { userId: parsedUserId });
+          console.log(`Presence: user ${parsedUserId} is now ONLINE`);
+        }
+
+        // Send full snapshot of currently online user IDs to this socket only
+        const onlineUserIds = [...presenceMap.entries()]
+          .filter(([, sockets]) => sockets.size > 0)
+          .map(([uid]) => uid);
+        socket.emit('presence_snapshot', { onlineUserIds });
       } else {
         console.warn(`Socket ${socket.id} unauthorized join attempt for user_${userId}`);
         socket.emit('error', { message: 'Unauthorized room join' });
@@ -65,6 +92,27 @@ module.exports = (io) => {
           return;
         }
 
+        // Check if sender account status is Suspended
+        const senderRes = await pool.query('SELECT account_status, suspended_until FROM users WHERE id = $1', [parsedSenderId]);
+        if (senderRes.rows.length > 0) {
+          const sender = senderRes.rows[0];
+          if (sender.account_status === 'Suspended') {
+            if (!sender.suspended_until || new Date(sender.suspended_until) > new Date()) {
+              socket.emit('error', { message: 'Your messaging access has been suspended by an admin.' });
+              return;
+            } else {
+              // Suspension expired, update status back to 'Active'
+              await pool.query("UPDATE users SET account_status = 'Active', suspended_until = NULL WHERE id = $1", [parsedSenderId]);
+            }
+          }
+        }
+
+        // Check if chat status is Restricted
+        if (chat.status === 'Restricted') {
+          socket.emit('error', { message: 'This conversation has been restricted by an admin.' });
+          return;
+        }
+
         // Check if chat is still active
         if (chat.status === 'Completed' || chat.status === 'Cancelled') {
           socket.emit('error', { message: 'Cannot send messages in a completed or cancelled chat' });
@@ -98,6 +146,19 @@ module.exports = (io) => {
 
     socket.on('disconnect', () => {
       console.log(`Socket disconnected: ${socket.id}`);
+
+      // --- Presence: deregister this socket ---
+      const userId = socket.presenceUserId;
+      if (userId && presenceMap.has(userId)) {
+        presenceMap.get(userId).delete(socket.id);
+
+        // Only broadcast offline if user has no remaining active connections
+        if (presenceMap.get(userId).size === 0) {
+          presenceMap.delete(userId);
+          io.emit('user_offline', { userId });
+          console.log(`Presence: user ${userId} is now OFFLINE`);
+        }
+      }
     });
   });
 };

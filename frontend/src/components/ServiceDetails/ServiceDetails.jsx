@@ -6,6 +6,22 @@ import '../Dashboard/Index.css';
 import './ServiceDetails.css';
 import Header from '../Common/Header';
 
+const PREDEFINED_SLOTS = [
+  '09:00 AM - 11:00 AM',
+  '11:00 AM - 01:00 PM',
+  '01:00 PM - 03:00 PM',
+  '03:00 PM - 05:00 PM',
+  '05:00 PM - 07:00 PM',
+];
+
+// Format a Date object to YYYY-MM-DD
+function toYMD(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 const ServiceDetails = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -17,6 +33,17 @@ const ServiceDetails = () => {
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState(null);
+
+  // ── Booking modal state ──────────────────────────────────────────────────
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [bookingDate, setBookingDate] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState('');
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [bookingError, setBookingError] = useState('');
+
+  const todayStr = toYMD(new Date());
 
   useEffect(() => {
     const fetchService = async () => {
@@ -34,12 +61,59 @@ const ServiceDetails = () => {
     fetchService();
   }, [id]);
 
-  const handleOrderRequest = async () => {
+  // Fetch booked (Accepted) slots whenever the date changes
+  useEffect(() => {
+    if (!bookingDate || !showBookingModal) return;
+    const fetchBookedSlots = async () => {
+      setLoadingSlots(true);
+      setSelectedSlot('');
+      try {
+        const res = await api.get(`/orders/service/${id}/booked-slots?date=${bookingDate}`);
+        if (res.data.success) {
+          setBookedSlots(res.data.bookedSlots);
+        }
+      } catch (err) {
+        console.error('Error fetching booked slots:', err);
+        setBookedSlots([]);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+    fetchBookedSlots();
+  }, [bookingDate, showBookingModal, id]);
+
+  const openBookingModal = () => {
     if (!selectedPlan) {
       alert('Please select a pricing plan (Basic Plan or Group/Premium Plan) before booking this service.');
       return;
     }
+    setBookingDate('');
+    setSelectedSlot('');
+    setBookedSlots([]);
+    setBookingError('');
+    setShowBookingModal(true);
+  };
+
+  const closeBookingModal = () => {
+    setShowBookingModal(false);
+    setBookingError('');
+  };
+
+  const handleConfirmBooking = async () => {
+    if (!bookingDate) {
+      setBookingError('Please select a date.');
+      return;
+    }
+    if (!selectedSlot) {
+      setBookingError('Please select a time slot.');
+      return;
+    }
+
+    setBookingSubmitting(true);
+    setBookingError('');
+
     const planPrice = selectedPlan === 'Basic Plan' ? service.standard_plan : service.group_plan;
+
     try {
       const res = await api.post('/orders', {
         buyerId: user.id || 5,
@@ -47,15 +121,21 @@ const ServiceDetails = () => {
         itemType: 'service',
         itemId: service.id,
         selectedPlanType: selectedPlan,
-        selectedPrice: planPrice
+        selectedPrice: planPrice,
+        bookingDate: bookingDate,
+        bookingSlot: selectedSlot,
       });
       if (res.data.success) {
+        setShowBookingModal(false);
         alert('Service booking sent successfully!');
         navigate('/orders', { state: { user } });
       }
     } catch (err) {
       console.error('Error sending booking request:', err);
-      alert('Failed to send booking request.');
+      const msg = err.response?.data?.message || 'Failed to send booking request.';
+      setBookingError(msg);
+    } finally {
+      setBookingSubmitting(false);
     }
   };
 
@@ -87,6 +167,13 @@ const ServiceDetails = () => {
             <div className="back-nav-sd" onClick={() => navigate('/services', { state: { user } })} title="Go Back">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             </div>
+
+            { (service.status === 'Suspended' || service.provider_account_status === 'Suspended') && (
+              <div className="suspension-warning-banner">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                <span>This service listing or the provider's profile is currently suspended by administrators. Bookings are temporarily disabled.</span>
+              </div>
+            )}
 
             {/* Banner Section */}
             <div className="sd-hero-banner">
@@ -154,7 +241,7 @@ const ServiceDetails = () => {
 
                 {/* Reviews */}
                 <div className="sd-section-block">
-                  <h3>Reviews & Ratings</h3>
+                  <h3>Reviews &amp; Ratings</h3>
                   <div className="reviews-analysis-box" style={{backgroundColor: '#F9FAFB', borderRadius: '1rem', padding: '2rem', display: 'flex', gap: '4rem', alignItems: 'center', margin: '1rem 0 2rem 0'}}>
                     <div className="raa-left" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem'}}>
                       <span className="raa-num" style={{fontSize: '3rem', fontWeight: 800, color: '#111827', lineHeight: 1}}>4.9</span>
@@ -235,11 +322,11 @@ const ServiceDetails = () => {
                   
                   <button 
                     className="sd-btn-primary" 
-                    onClick={handleOrderRequest}
-                    disabled={service.available_quantity === 0 || service.status !== 'Active'}
+                    onClick={openBookingModal}
+                    disabled={service.status !== 'Active' || service.provider_account_status === 'Suspended'}
                     style={{
-                      opacity: (service.available_quantity === 0 || service.status !== 'Active') ? 0.5 : 1,
-                      cursor: (service.available_quantity === 0 || service.status !== 'Active') ? 'not-allowed' : 'pointer'
+                      opacity: (service.status !== 'Active' || service.provider_account_status === 'Suspended') ? 0.5 : 1,
+                      cursor: (service.status !== 'Active' || service.provider_account_status === 'Suspended') ? 'not-allowed' : 'pointer'
                     }}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
@@ -247,6 +334,7 @@ const ServiceDetails = () => {
                   </button>
                   
                   <ul className="sd-bullets">
+                    <li>Select a plan above, then pick a date &amp; time slot.</li>
                     <li>Track your booking in Orders/ Notifications.</li>
                   </ul>
                 </div>
@@ -257,7 +345,7 @@ const ServiceDetails = () => {
             {/* Similar Services */}
             <div className="sd-similar-head">
               <h2 style={{fontSize: '1.25rem', fontWeight: 700, margin: 0}}>Similar Services</h2>
-              <span className="sd-view-all" onClick={() => navigate('/services', { state: { user }})}>View all ›</span>
+              <span className="sd-view-all" onClick={() => navigate('/services', { state: { user}})}>View all ›</span>
             </div>
             
             <div className="sd-similar-grid">
@@ -282,6 +370,131 @@ const ServiceDetails = () => {
           </div>
         </div>
       </main>
+
+      {/* ── Booking Modal ─────────────────────────────────────────────────────── */}
+      {showBookingModal && (
+        <div className="sd-modal-overlay" onClick={closeBookingModal}>
+          <div className="sd-modal-card" onClick={e => e.stopPropagation()}>
+            
+            {/* Modal Header */}
+            <div className="sd-modal-header">
+              <div className="sd-modal-header-left">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <h3 className="sd-modal-title">Book a Time Slot</h3>
+              </div>
+              <button className="sd-modal-close" onClick={closeBookingModal} aria-label="Close">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+
+            {/* Selected Plan Summary */}
+            <div className="sd-modal-plan-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+              <span>{selectedPlan}</span>
+              <span className="sd-modal-plan-price">
+                ₹{selectedPlan === 'Basic Plan' ? service.standard_plan : service.group_plan}
+              </span>
+            </div>
+
+            {/* Date Picker */}
+            <div className="sd-modal-field">
+              <label className="sd-modal-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                Select Date
+              </label>
+              <input
+                id="booking-date-input"
+                type="date"
+                className="sd-modal-date-input"
+                value={bookingDate}
+                min={todayStr}
+                onChange={e => {
+                  setBookingDate(e.target.value);
+                  setSelectedSlot('');
+                  setBookingError('');
+                }}
+              />
+            </div>
+
+            {/* Time Slots */}
+            <div className="sd-modal-field">
+              <label className="sd-modal-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Select Time Slot
+              </label>
+
+              {!bookingDate ? (
+                <p className="sd-modal-slot-hint">Pick a date first to see available slots.</p>
+              ) : loadingSlots ? (
+                <p className="sd-modal-slot-hint">Loading available slots…</p>
+              ) : (
+                <div className="sd-slot-grid">
+                  {PREDEFINED_SLOTS.map(slot => {
+                    const isBooked = bookedSlots.includes(slot);
+                    const isSelected = selectedSlot === slot;
+                    return (
+                      <button
+                        key={slot}
+                        className={`sd-slot-btn ${isSelected ? 'selected' : ''} ${isBooked ? 'booked' : ''}`}
+                        disabled={isBooked}
+                        onClick={() => {
+                          if (!isBooked) {
+                            setSelectedSlot(slot);
+                            setBookingError('');
+                          }
+                        }}
+                        title={isBooked ? 'Already booked' : slot}
+                      >
+                        {isBooked && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{marginRight: '4px', flexShrink: 0}}><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                        )}
+                        {isSelected && !isBooked && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{marginRight: '4px', flexShrink: 0}}><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        )}
+                        {slot}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Error */}
+            {bookingError && (
+              <div className="sd-modal-error">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                {bookingError}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="sd-modal-actions">
+              <button className="sd-modal-btn-cancel" onClick={closeBookingModal} disabled={bookingSubmitting}>
+                Cancel
+              </button>
+              <button
+                className="sd-modal-btn-confirm"
+                onClick={handleConfirmBooking}
+                disabled={bookingSubmitting || !bookingDate || !selectedSlot}
+              >
+                {bookingSubmitting ? (
+                  <>
+                    <span className="sd-modal-spinner"></span>
+                    Booking…
+                  </>
+                ) : (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    Confirm Booking
+                  </>
+                )}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

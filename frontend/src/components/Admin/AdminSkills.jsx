@@ -2,31 +2,42 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../api/axiosConfig';
 import AdminSidebar from './AdminSidebar';
+import Pagination from '../Common/Pagination';
 import './AdminSkills.css';
 
 const AdminSkills = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const user = location.state?.user || JSON.parse(localStorage.getItem('user'));
+  const user = React.useMemo(() => {
+    try {
+      return location.state?.user || JSON.parse(localStorage.getItem('user'));
+    } catch (e) {
+      return null;
+    }
+  }, [location.state?.user]);
   
   const [skills, setSkills] = useState([]);
   const [filteredSkills, setFilteredSkills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const userRole = user?.role;
 
   // Route protection
   useEffect(() => {
-    if (!user || user.role !== 'admin') {
+    if (!userRole || userRole !== 'admin') {
       navigate('/login');
     }
-  }, [user, navigate]);
+  }, [userRole, navigate]);
 
   useEffect(() => {
-    if (user && user.role === 'admin') {
+    if (userRole === 'admin') {
       fetchSkills();
     }
-  }, [user]);
+  }, [userRole]);
 
   const fetchSkills = async () => {
     try {
@@ -42,13 +53,14 @@ const AdminSkills = () => {
     }
   };
 
-  const handleUpdateStatus = async (skillId, newStatus) => {
+  const handleUpdateStatus = async (skillId, newStatus, rejectionReason = null) => {
     try {
       const res = await api.put(`/admin/skills/${skillId}/status`, {
-        status: newStatus
+        status: newStatus,
+        rejectionReason
       });
       if (res.data.success) {
-        const updated = skills.map(s => s.id === skillId ? { ...s, status: newStatus } : s);
+        const updated = skills.map(s => s.id === skillId ? { ...s, status: newStatus, rejection_reason: rejectionReason } : s);
         setSkills(updated);
         filterList(searchTerm, updated);
         setActiveDropdown(null);
@@ -65,6 +77,15 @@ const AdminSkills = () => {
       s.category.toLowerCase().includes(term.toLowerCase())
     );
     setFilteredSkills(filtered);
+    setCurrentPage(1);
+  };
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const paginatedSkills = filteredSkills.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
   };
 
   const handleSearch = (e) => {
@@ -117,7 +138,8 @@ const AdminSkills = () => {
           {loading ? (
             <div style={{padding: '2rem', textAlign: 'center'}}>Loading skills...</div>
           ) : (
-            <table className="admin-table">
+            <>
+              <table className="admin-table">
               <thead>
                 <tr>
                   <th>SKILL TITLE</th>
@@ -130,7 +152,7 @@ const AdminSkills = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredSkills.length > 0 ? filteredSkills.map((skill) => (
+                {paginatedSkills.length > 0 ? paginatedSkills.map((skill) => (
                   <tr key={skill.id}>
                     <td>
                       <strong style={{color: '#111827'}}>{skill.title}</strong>
@@ -142,30 +164,18 @@ const AdminSkills = () => {
                       {skill.charge_type === 'Paid' ? `Paid (₹${skill.hourly_rate}/hr)` : 'Exchange'}
                     </td>
                     <td>
-                      <span className={`status-badge ${skill.status?.toLowerCase() || 'pending'}`}>
+                      <span className={`status-badge ${skill.status?.toLowerCase().replace(/\s+/g, '-') || 'pending'}`}>
                         {skill.status || 'Pending'}
                       </span>
                     </td>
                     <td className="text-right">
-                      <div className="action-dropdown-wrapper">
-                        <button className="options-btn" onClick={() => toggleDropdown(skill.id)}>
-                          Options
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        </button>
-                        
-                        {activeDropdown === skill.id && (
-                          <div className="admin-dropdown-menu">
-                            <button onClick={() => navigate(`/admin/skills/${skill.id}`, { state: { user } })}>
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                              View
-                            </button>
-                            <button className="text-green" onClick={() => handleUpdateStatus(skill.id, 'Active')}>
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
-                              Verify
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                      <button
+                        className="options-btn"
+                        onClick={() => navigate(`/admin/skills/${skill.id}`, { state: { user } })}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        View
+                      </button>
                     </td>
                   </tr>
                 )) : (
@@ -175,6 +185,14 @@ const AdminSkills = () => {
                 )}
               </tbody>
             </table>
+            
+            <Pagination 
+              currentPage={currentPage}
+              totalItems={filteredSkills.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={handlePageChange}
+            />
+            </>
           )}
         </div>
       </main>

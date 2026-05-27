@@ -9,7 +9,6 @@
 
 .ord-scrollable {
   padding: 2.5rem 3.5rem;
-  overflow-y: auto;
 }
 
 /* Header Rows */
@@ -184,12 +183,17 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 2rem;
-  transition: background-color 0.15s;
+  padding: 2rem 4.5rem 2rem 4.25rem;
+  transition: all 0.15s;
+  position: relative;
 }
 
 .ord-itm:hover {
   background-color: #F9FAFB;
+}
+
+.ord-itm.selected {
+  background-color: rgba(99, 102, 241, 0.03);
 }
 
 .ord-border-btm {
@@ -447,4 +451,156 @@
 
 .ord-btn-submit:hover {
   background-color: #8B5CF6;
+}
+
+/* Bulk selection & single-delete styles matching notifications page */
+.orders-bulk-actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  margin: 1.25rem 2rem;
+  animation: slideDown 0.2s ease-out;
+}
+
+.ord-bulk-select-all-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ord-bulk-delete-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.15);
+  transition: all 0.2s ease;
+}
+
+.ord-bulk-delete-btn:hover {
+  background-color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
+}
+
+.ord-bulk-delete-btn:active {
+  transform: translateY(0);
+}
+
+.ord-select-wrapper {
+  position: absolute;
+  left: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+.ord-itm:hover .ord-select-wrapper,
+.ord-itm.selected .ord-select-wrapper {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.custom-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #cbd5e1;
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  position: relative;
+  background-color: #ffffff;
+}
+
+.custom-checkbox:hover {
+  border-color: #6366f1;
+  background-color: #f8fafc;
+}
+
+.custom-checkbox:checked {
+  background-color: #6366f1;
+  border-color: #6366f1;
+}
+
+.custom-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
+  left: 6px;
+  top: 2px;
+}
+
+.ord-delete-single-btn {
+  position: absolute;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #f1f5f9;
+  background-color: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.ord-itm:hover .ord-delete-single-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ord-delete-single-btn:hover {
+  background-color: #fef2f2;
+  border-color: #fee2e2;
+  color: #ef4444;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

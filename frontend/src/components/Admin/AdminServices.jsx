@@ -2,31 +2,42 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../api/axiosConfig';
 import AdminSidebar from './AdminSidebar';
+import Pagination from '../Common/Pagination';
 import './AdminServices.css';
 
 const AdminServices = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const user = location.state?.user || JSON.parse(localStorage.getItem('user'));
+  const user = React.useMemo(() => {
+    try {
+      return location.state?.user || JSON.parse(localStorage.getItem('user'));
+    } catch (e) {
+      return null;
+    }
+  }, [location.state?.user]);
   
   const [services, setServices] = useState([]);
   const [filteredServices, setFilteredServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const userRole = user?.role;
 
   // Route protection
   useEffect(() => {
-    if (!user || user.role !== 'admin') {
+    if (!userRole || userRole !== 'admin') {
       navigate('/login');
     }
-  }, [user, navigate]);
+  }, [userRole, navigate]);
 
   useEffect(() => {
-    if (user && user.role === 'admin') {
+    if (userRole === 'admin') {
       fetchServices();
     }
-  }, [user]);
+  }, [userRole]);
 
   const fetchServices = async () => {
     try {
@@ -65,6 +76,15 @@ const AdminServices = () => {
       s.category.toLowerCase().includes(term.toLowerCase())
     );
     setFilteredServices(filtered);
+    setCurrentPage(1);
+  };
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const paginatedServices = filteredServices.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
   };
 
   const handleSearch = (e) => {
@@ -117,7 +137,8 @@ const AdminServices = () => {
           {loading ? (
             <div style={{padding: '2rem', textAlign: 'center'}}>Loading services...</div>
           ) : (
-            <table className="admin-table">
+            <>
+              <table className="admin-table">
               <thead>
                 <tr>
                   <th>SERVICE TITLE</th>
@@ -129,7 +150,7 @@ const AdminServices = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredServices.length > 0 ? filteredServices.map((service) => (
+                {paginatedServices.length > 0 ? paginatedServices.map((service) => (
                   <tr key={service.id}>
                     <td>
                       <strong style={{color: '#111827'}}>{service.title}</strong>
@@ -176,6 +197,14 @@ const AdminServices = () => {
                 )}
               </tbody>
             </table>
+            
+            <Pagination 
+              currentPage={currentPage}
+              totalItems={filteredServices.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={handlePageChange}
+            />
+            </>
           )}
         </div>
       </main>

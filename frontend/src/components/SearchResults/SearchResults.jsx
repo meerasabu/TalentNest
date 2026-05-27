@@ -59,6 +59,42 @@ const SearchResults = () => {
       </div>
       <div>
         <h3 style={{fontSize: '1.125rem', fontWeight: '700', color: '#111827', margin: '0 0 0.25rem 0'}}>{prod.title}</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '0.5rem', fontSize: '0.75rem', color: '#4B5563' }}>
+          <span style={{ color: '#FBBF24' }}>⭐</span>
+          <span style={{ fontWeight: 600 }}>{prod.rating ? parseFloat(prod.rating).toFixed(1) : '0.0'}</span>
+          <span style={{ color: '#9CA3AF' }}>({prod.reviews || 0} {prod.reviews === 1 ? 'Review' : 'Reviews'})</span>
+        </div>
+        
+        <div className="prod-seller-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
+          {prod.profile_image ? (
+            <img 
+              src={`http://localhost:5000${prod.profile_image}`} 
+              alt={prod.first_name} 
+              style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover' }} 
+            />
+          ) : (
+            <div 
+              style={{ 
+                width: '20px', 
+                height: '20px', 
+                borderRadius: '50%', 
+                backgroundColor: '#E5E7EB', 
+                color: '#4B5563', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                fontSize: '9px', 
+                fontWeight: 'bold' 
+              }}
+            >
+              {prod.first_name?.[0]?.toUpperCase() || 'U'}
+            </div>
+          )}
+          <span style={{ fontSize: '0.75rem', color: '#4B5563' }}>
+            by <strong>{prod.first_name} {prod.last_name?.charAt(0)}.</strong>
+          </span>
+        </div>
+
         <p style={{fontSize: '1rem', fontWeight: '800', color: '#4F46E5', margin: '0 0 0.5rem 0'}}>₹{prod.price}</p>
         <p style={{fontSize: '0.875rem', color: '#6B7280', margin: '0'}}>{prod.category}</p>
       </div>

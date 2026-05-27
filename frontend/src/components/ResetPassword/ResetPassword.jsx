@@ -45,7 +45,14 @@ const ResetPassword = () => {
           </svg>
         </button>
 
-        <h1 className="reset-title">Reset Password</h1>
+        <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#4f46e5', margin: '0 0 0.25rem 0', letterSpacing: '-0.025em' }}>
+            TalentNest
+          </h1>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1f2937', margin: 0 }}>
+            Reset Password
+          </h2>
+        </div>
         <p className="reset-subtitle">Enter your email to receive a reset code</p>
 
         {message && (

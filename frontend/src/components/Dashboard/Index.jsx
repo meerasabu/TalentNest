@@ -91,6 +91,77 @@ const IndexDashboard = () => {
             </div>
           </div>
 
+          {/* Stats Overview Panel */}
+          <div className="dashboard-stats-row">
+            <div className="stat-widget-card products-stat" onClick={() => navigate('/marketplace', { state: { user } })} style={{ cursor: 'pointer' }}>
+              <div className="stat-widget-glow"></div>
+              <div className="stat-widget-icon purple">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+              </div>
+              <div className="stat-widget-details">
+                <span className="stat-widget-num">
+                  {loading ? (
+                    <span className="skeleton" style={{ width: '40px', height: '24px', borderRadius: '4px' }}></span>
+                  ) : (
+                    dashboardData.products.length
+                  )}
+                </span>
+                <span className="stat-widget-label">Market Items</span>
+              </div>
+            </div>
+
+            <div className="stat-widget-card skills-stat" onClick={() => navigate('/skills', { state: { user } })} style={{ cursor: 'pointer' }}>
+              <div className="stat-widget-glow"></div>
+              <div className="stat-widget-icon indigo">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+              </div>
+              <div className="stat-widget-details">
+                <span className="stat-widget-num">
+                  {loading ? (
+                    <span className="skeleton" style={{ width: '40px', height: '24px', borderRadius: '4px' }}></span>
+                  ) : (
+                    dashboardData.skills.length
+                  )}
+                </span>
+                <span className="stat-widget-label">Mentors Active</span>
+              </div>
+            </div>
+
+            <div className="stat-widget-card services-stat" onClick={() => navigate('/services', { state: { user } })} style={{ cursor: 'pointer' }}>
+              <div className="stat-widget-glow"></div>
+              <div className="stat-widget-icon blue">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+              </div>
+              <div className="stat-widget-details">
+                <span className="stat-widget-num">
+                  {loading ? (
+                    <span className="skeleton" style={{ width: '40px', height: '24px', borderRadius: '4px' }}></span>
+                  ) : (
+                    dashboardData.services.length
+                  )}
+                </span>
+                <span className="stat-widget-label">Campus Services</span>
+              </div>
+            </div>
+
+            <div className="stat-widget-card activity-stat" onClick={() => navigate('/notifications', { state: { user } })} style={{ cursor: 'pointer' }}>
+              <div className="stat-widget-glow"></div>
+              <div className="stat-widget-icon green">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              </div>
+              <div className="stat-widget-details">
+                <span className="stat-widget-num">
+                  {loading ? (
+                    <span className="skeleton" style={{ width: '40px', height: '24px', borderRadius: '4px' }}></span>
+                  ) : (
+                    dashboardData.activities.length
+                  )}
+                </span>
+                <span className="stat-widget-label">Exchanges Done</span>
+              </div>
+            </div>
+          </div>
+
           <div className="dashboard-grid">
             <div className="left-column">
               {/* Trending Products */}
@@ -100,14 +171,26 @@ const IndexDashboard = () => {
                   <span className="view-all" onClick={() => navigate('/marketplace', { state: { user } })} style={{cursor: 'pointer'}}>View all →</span>
                 </div>
                 <div className="cards-grid">
-                  {dashboardData.products.length > 0 ? dashboardData.products.map(prod => (
+                  {loading ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                      <div key={`prod-skeleton-${i}`} className="product-card skeleton-card">
+                        <div className="image-box skeleton skeleton-img" style={{ minHeight: '200px' }}></div>
+                        <div className="product-info">
+                          <div className="skeleton" style={{ width: '80%', height: '18px', marginBottom: '8px', borderRadius: '4px' }}></div>
+                          <div className="skeleton" style={{ width: '60%', height: '14px', borderRadius: '4px' }}></div>
+                        </div>
+                      </div>
+                    ))
+                  ) : dashboardData.products.length > 0 ? dashboardData.products.map(prod => (
                     <div key={prod.id} className="product-card" onClick={() => navigate(`/product/${prod.id}`)} style={{cursor: 'pointer'}}>
                       <div className="image-box">
                         <img src={prod.image_urls && prod.image_urls.length > 0 ? `http://127.0.0.1:5000${prod.image_urls[0]}` : "https://placehold.co/200x200"} alt={prod.title} />
                         <span className="price-tag">₹{prod.price}</span>
                       </div>
-                      <h4>{prod.title}</h4>
-                      <p>Listed {new Date(prod.created_at).toLocaleDateString()}</p>
+                      <div className="product-info">
+                        <h4>{prod.title}</h4>
+                        <p className="product-meta">{prod.category} • Listed {new Date(prod.created_at).toLocaleDateString()}</p>
+                      </div>
                     </div>
                   )) : (
                     <div className="loading-placeholder">No trending products found.</div>
@@ -122,7 +205,18 @@ const IndexDashboard = () => {
                   <span className="view-all" onClick={() => navigate('/services', { state: { user } })} style={{cursor: 'pointer'}}>View all →</span>
                 </div>
                 <div className="service-cards">
-                  {dashboardData.services.length > 0 ? dashboardData.services.map(svc => (
+                  {loading ? (
+                    Array.from({ length: 2 }).map((_, i) => (
+                      <div key={`svc-skeleton-${i}`} className="service-card skeleton-card">
+                        <div className="skeleton skeleton-img" style={{ width: '68px', height: '68px', borderRadius: '10px', flexShrink: 0 }}></div>
+                        <div className="service-info" style={{ flex: 1 }}>
+                          <div className="skeleton" style={{ width: '70%', height: '16px', marginBottom: '6px', borderRadius: '4px' }}></div>
+                          <div className="skeleton" style={{ width: '50%', height: '12px', marginBottom: '8px', borderRadius: '4px' }}></div>
+                          <div className="skeleton" style={{ width: '60px', height: '20px', borderRadius: '6px' }}></div>
+                        </div>
+                      </div>
+                    ))
+                  ) : dashboardData.services.length > 0 ? dashboardData.services.map(svc => (
                     <div key={svc.id} className="service-card" onClick={() => navigate(`/service/${svc.id}`)} style={{cursor: 'pointer'}}>
                       <img src={svc.image_urls && svc.image_urls.length > 0 ? `http://127.0.0.1:5000${svc.image_urls[0]}` : "https://placehold.co/60x60"} alt={svc.title} />
                       <div className="service-info">
@@ -146,7 +240,17 @@ const IndexDashboard = () => {
                   Recent Updates
                 </div>
                 <ul className="updates-list">
-                  {dashboardData.activities.length > 0 ? dashboardData.activities.map(act => {
+                  {loading ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                      <li key={`act-skeleton-${i}`} className="skeleton-item" style={{ animationDelay: `${i * 0.15}s` }}>
+                        <span className="dot skeleton skeleton-dark" style={{ width: '10px', height: '10px', borderRadius: '50%', border: '4px solid #141E30', margin: '0.35rem 0 0 0', flexShrink: 0 }}></span>
+                        <div className="update-content" style={{ flex: 1 }}>
+                          <div className="skeleton skeleton-dark" style={{ width: '40%', height: '14px', marginBottom: '6px', borderRadius: '4px' }}></div>
+                          <div className="skeleton skeleton-dark" style={{ width: '85%', height: '12px', borderRadius: '4px' }}></div>
+                        </div>
+                      </li>
+                    ))
+                  ) : dashboardData.activities.length > 0 ? dashboardData.activities.map(act => {
                     const isBuyer = act.buyer_id === user.id;
                     const partnerName = isBuyer ? `${act.seller_first_name} ${act.seller_last_name || ''}` : `${act.buyer_first_name} ${act.buyer_last_name || ''}`;
                     const itemTitle = act.product_title || act.skill_title || act.service_title || 'Item';
@@ -193,7 +297,18 @@ const IndexDashboard = () => {
               <section className="dashboard-section">
                 <h3 className="section-title">Popular Skills</h3>
                 <div className="skills-list" style={{marginTop: '1rem'}}>
-                  {dashboardData.skills.length > 0 ? dashboardData.skills.map(skill => (
+                  {loading ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                      <div key={`skill-skeleton-${i}`} className="skill-card skeleton-card">
+                        <div className="skeleton skeleton-img" style={{ width: '44px', height: '44px', borderRadius: '10px', flexShrink: 0 }}></div>
+                        <div className="skill-info" style={{ flex: 1 }}>
+                          <div className="skeleton" style={{ width: '60%', height: '14px', marginBottom: '6px', borderRadius: '4px' }}></div>
+                          <div className="skeleton" style={{ width: '45%', height: '12px', borderRadius: '4px' }}></div>
+                        </div>
+                        <div className="skeleton" style={{ width: '38px', height: '22px', borderRadius: '6px' }}></div>
+                      </div>
+                    ))
+                  ) : dashboardData.skills.length > 0 ? dashboardData.skills.map(skill => (
                     <div key={skill.id} className="skill-card" onClick={() => navigate(`/skills/${skill.id}`)} style={{cursor: 'pointer'}}>
                       <div className="skill-icon">
                         {skill.image_urls && skill.image_urls.length > 0 ? (

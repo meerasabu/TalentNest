@@ -8,7 +8,13 @@ import './AdminMarketplace.css';
 const AdminMarketplace = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const user = location.state?.user || JSON.parse(localStorage.getItem('user'));
+  const user = React.useMemo(() => {
+    try {
+      return location.state?.user || JSON.parse(localStorage.getItem('user'));
+    } catch (e) {
+      return null;
+    }
+  }, [location.state?.user]);
   
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -18,18 +24,20 @@ const AdminMarketplace = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  const userRole = user?.role;
+
   // Route protection
   useEffect(() => {
-    if (!user || user.role !== 'admin') {
+    if (!userRole || userRole !== 'admin') {
       navigate('/login');
     }
-  }, [user, navigate]);
+  }, [userRole, navigate]);
 
   useEffect(() => {
-    if (user && user.role === 'admin') {
+    if (userRole === 'admin') {
       fetchProducts();
     }
-  }, [user]);
+  }, [userRole]);
 
   const fetchProducts = async () => {
     try {

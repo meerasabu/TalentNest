@@ -40,6 +40,66 @@ export const NotificationProvider = ({ children }) => {
       if (chatRes.data.success) {
         setUnreadChatCount(chatRes.data.count);
       }
+
+      // 2. Fetch and calculate unread notification count
+      const [buyerRes, sellerRes, restockRes] = await Promise.all([
+        api.get(`/orders/buyer/${currentUser.id}`),
+        api.get(`/orders/seller/${currentUser.id}`),
+        api.get('/notifications').catch(err => {
+          console.error('Error fetching restock notifications for counts:', err);
+          return { data: { success: false, notifications: [] } };
+        })
+      ]);
+
+      const deletedSaved = localStorage.getItem(`deleted_notifications_${currentUser.id}`);
+      const deletedIds = deletedSaved ? JSON.parse(deletedSaved) : [];
+      const readSaved = localStorage.getItem(`read_notifications_${currentUser.id}`);
+      const readIds = readSaved ? JSON.parse(readSaved) : [];
+
+      let notifCount = 0;
+      // Admin notification
+      if (!deletedIds.includes('admin-1') && !readIds.includes('admin-1')) {
+        notifCount += 1;
+      }
+
+      if (buyerRes.data.success) {
+        buyerRes.data.orders.forEach(o => {
+          const notifId = `buyer-${o.id}`;
+          if (!deletedIds.includes(notifId) && !readIds.includes(notifId)) {
+            notifCount += 1;
+          }
+        });
+      }
+
+      if (sellerRes.data.success) {
+        sellerRes.data.orders.forEach(o => {
+          const notifId = `seller-${o.id}`;
+          if (!deletedIds.includes(notifId) && !readIds.includes(notifId)) {
+            notifCount += 1;
+          }
+        });
+      }
+
+      if (restockRes && restockRes.data && restockRes.data.success) {
+        if (restockRes.data.notifications) {
+          restockRes.data.notifications.forEach(n => {
+            const notifId = `restock-${n.id}`;
+            if (!deletedIds.includes(notifId) && !readIds.includes(notifId)) {
+              notifCount += 1;
+            }
+          });
+        }
+        if (restockRes.data.generalNotifications) {
+          restockRes.data.generalNotifications.forEach(n => {
+            const notifId = `general-${n.id}`;
+            if (!deletedIds.includes(notifId) && !readIds.includes(notifId)) {
+              notifCount += 1;
+            }
+          });
+        }
+      }
+
+      setUnreadNotificationCount(notifCount);
     } catch (err) {
       console.error('Error fetching unread counts:', err);
     }
@@ -48,6 +108,8 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     if (user) {
       fetchUnreadCounts();
+      const interval = setInterval(fetchUnreadCounts, 10000);
+      return () => clearInterval(interval);
     }
   }, [user]);
 

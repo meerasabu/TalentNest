@@ -6,12 +6,16 @@ import '../Dashboard/Index.css';
 import './Messages.css';
 import Header from '../Common/Header';
 import io from 'socket.io-client';
+import { useNotifications } from '../../context/NotificationContext';
+import { usePresence } from '../../context/PresenceContext';
 
 const Messages = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const user = location.state?.user || JSON.parse(localStorage.getItem('user') || 'null');
   const { orderId } = location.state || {};
+  const { fetchUnreadCounts } = useNotifications() || { fetchUnreadCounts: () => {} };
+  const { isOnline } = usePresence();
 
   useEffect(() => {
     if (!user) {
@@ -26,6 +30,7 @@ const Messages = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Modals state
   const [reportModalOpen, setReportModalOpen] = useState(false);
@@ -35,15 +40,51 @@ const Messages = () => {
   const [reviewText, setReviewText] = useState('');
   const [reviewOrderId, setReviewOrderId] = useState(null);
 
+  // Graded ratings
+  const [communicationRating, setCommunicationRating] = useState(0);
+  const [teachingRating, setTeachingRating] = useState(0);
+  const [outcomeRating, setOutcomeRating] = useState(0);
+  const [commHover, setCommHover] = useState(0);
+  const [teachHover, setTeachHover] = useState(0);
+  const [outcomeHover, setOutcomeHover] = useState(0);
+  // Product-specific trust metrics
+  const [productQualityRating, setProductQualityRating] = useState(0);
+  const [valueRating, setValueRating] = useState(0);
+  const [sellerCommRating, setSellerCommRating] = useState(0);
+  const [productQualityHover, setProductQualityHover] = useState(0);
+  const [valueHover, setValueHover] = useState(0);
+  const [sellerCommHover, setSellerCommHover] = useState(0);
+
   // Session-based states
   const [activeChatId, setActiveChatId] = useState(null);
   const [unreadSessions, setUnreadSessions] = useState({});
+  const [showHistory, setShowHistory] = useState(false);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const tabsContainerRef = useRef(null);
+  const historyRef = useRef(null);
 
   const activeGroup = partnerGroups.find(g => g.partner_id === activePartnerId);
+
+  const filteredPartnerGroups = useMemo(() => {
+    if (!searchQuery.trim()) return partnerGroups;
+    return partnerGroups.filter(g => 
+      (g.partner_name || '').toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [partnerGroups, searchQuery]);
 
   const sortedChats = useMemo(() => {
     return activeGroup ? [...activeGroup.chats].sort((a,b) => new Date(a.created_at) - new Date(b.created_at)) : [];
   }, [activeGroup]);
+
+  const activeChats = useMemo(() => {
+    return sortedChats.filter(c => !c.is_closed);
+  }, [sortedChats]);
+
+  const closedChats = useMemo(() => {
+    return sortedChats.filter(c => c.is_closed);
+  }, [sortedChats]);
 
   const effectiveChatId = useMemo(() => {
     if (sortedChats.length === 0) return null;
@@ -51,18 +92,22 @@ const Messages = () => {
     if (exists) return activeChatId;
     
     // Priority 1: accepted & active sessions
-    const activeSession = sortedChats.find(c => c.order_status === 'Accepted' && c.chat_status !== 'Completed' && c.chat_status !== 'Cancelled');
+    const activeSession = activeChats.find(c => c.order_status === 'Accepted' && c.chat_status !== 'Completed' && c.chat_status !== 'Cancelled');
     // Priority 2: pending sessions
-    const pendingSession = sortedChats.find(c => c.order_status === 'Pending');
-    // Priority 3: fallback to latest session
-    const fallback = sortedChats[sortedChats.length - 1];
+    const pendingSession = activeChats.find(c => c.order_status === 'Pending');
+    // Priority 3: fallback to latest active session
+    const fallbackActive = activeChats[activeChats.length - 1];
     
-    return activeSession?.chat_id || pendingSession?.chat_id || fallback?.chat_id || null;
-  }, [sortedChats, activeChatId]);
+    return activeSession?.chat_id || pendingSession?.chat_id || fallbackActive?.chat_id || sortedChats[sortedChats.length - 1]?.chat_id || null;
+  }, [sortedChats, activeChats, activeChatId]);
 
   const currentChat = useMemo(() => {
     return sortedChats.find(c => c.chat_id === effectiveChatId) || null;
   }, [sortedChats, effectiveChatId]);
+
+  useEffect(() => {
+    setDetailsExpanded(false);
+  }, [effectiveChatId]);
 
   const canType = useMemo(() => {
     return currentChat && currentChat.chat_status === 'Active' && currentChat.order_status === 'Accepted';
@@ -102,11 +147,13 @@ const Messages = () => {
       setLoading(true);
       const fetched = await fetchChats();
       const rawChats = fetched?.rawChats || [];
+      const groups = fetched?.groupArr || [];
 
       if (orderId) {
         const existingChat = rawChats.find(c => c.order_id === orderId);
         if (existingChat) {
           setActivePartnerId(existingChat.partner_id);
+          setActiveChatId(existingChat.chat_id);
         } else {
           // Create new chat
           const createRes = await api.post(`/chats`, {
@@ -116,14 +163,19 @@ const Messages = () => {
           if (createRes.data.success) {
             const updated = await fetchChats();
             const newlyCreated = updated.rawChats.find(c => c.order_id === orderId);
-            if (newlyCreated) setActivePartnerId(newlyCreated.partner_id);
+            if (newlyCreated) {
+              setActivePartnerId(newlyCreated.partner_id);
+              setActiveChatId(newlyCreated.chat_id);
+            }
           }
         }
+      } else if (groups.length > 0 && !activePartnerId) {
+        setActivePartnerId(groups[0].partner_id);
       }
       setLoading(false);
     };
     initChats();
-  }, [user, orderId, fetchChats]);
+  }, [user, orderId, fetchChats, activePartnerId]);
 
   const socketRef = useRef(null);
   const activePartnerIdRef = useRef(activePartnerId);
@@ -142,6 +194,29 @@ const Messages = () => {
   useEffect(() => {
     activeChatIdRef.current = effectiveChatId;
   }, [effectiveChatId]);
+
+  const markMessagesAsRead = useCallback(async (chatId) => {
+    if (!chatId) return;
+    try {
+      await api.post(`/chats/chat/${chatId}/read`);
+      if (fetchUnreadCounts) {
+        fetchUnreadCounts();
+      }
+    } catch (err) {
+      console.error('Error marking messages as read:', err);
+    }
+  }, [fetchUnreadCounts]);
+
+  const markMessagesAsReadRef = useRef(markMessagesAsRead);
+  useEffect(() => {
+    markMessagesAsReadRef.current = markMessagesAsRead;
+  }, [markMessagesAsRead]);
+
+  useEffect(() => {
+    if (effectiveChatId) {
+      markMessagesAsRead(effectiveChatId);
+    }
+  }, [effectiveChatId, markMessagesAsRead]);
 
   const fetchMessages = useCallback(async (partnerId) => {
     try {
@@ -185,6 +260,8 @@ const Messages = () => {
         // Set unread if message is for a background session
         if (msg.chat_id !== activeChatIdRef.current && msg.sender_id !== user?.id) {
           setUnreadSessions(prev => ({ ...prev, [msg.chat_id]: true }));
+        } else if (msg.chat_id === activeChatIdRef.current && msg.sender_id !== user?.id) {
+          markMessagesAsReadRef.current(msg.chat_id);
         }
       }
 
@@ -208,8 +285,22 @@ const Messages = () => {
       }
     });
 
+    socket.on('chat_restricted', () => {
+      fetchChats();
+      const currentActivePartnerId = activePartnerIdRef.current;
+      if (currentActivePartnerId) {
+        fetchMessages(currentActivePartnerId);
+      }
+    });
+
     socket.on('error', (err) => {
       console.error('Socket error:', err.message);
+      alert(err.message || 'An error occurred.');
+      fetchChats();
+      const currentActivePartnerId = activePartnerIdRef.current;
+      if (currentActivePartnerId) {
+        fetchMessages(currentActivePartnerId);
+      }
     });
 
     return () => {
@@ -293,7 +384,10 @@ const Messages = () => {
       const res = await api.post(`/chats/report`, {
         reporterId: user?.id,
         reportedId: activePartnerId,
-        reason: reportReason
+        reason: reportReason,
+        chatId: currentChat?.chat_id,
+        itemId: currentChat?.item_id,
+        itemType: currentChat?.item_type
       });
       if (res.data.success) {
         alert("Report submitted successfully.");
@@ -308,22 +402,112 @@ const Messages = () => {
 
   const submitReview = async () => {
     try {
+      const isSkill = currentChat?.item_type === 'skill';
+      const isProduct = currentChat?.item_type === 'product';
       const res = await api.post(`/reviews`, {
         reviewerId: user?.id,
         reviewedId: activePartnerId,
         orderId: reviewOrderId,
         rating: reviewRating,
-        reviewText: reviewText
+        reviewText: reviewText,
+        communicationRating: isSkill ? communicationRating : (isProduct ? sellerCommRating : null),
+        teachingRating: isSkill ? teachingRating : (isProduct ? productQualityRating : null),
+        outcomeRating: isSkill ? outcomeRating : (isProduct ? valueRating : null)
       });
       if (res.data.success) {
         alert("Review submitted successfully!");
         setReviewModalOpen(false);
         setReviewText('');
         setReviewRating(5);
+        setCommunicationRating(0);
+        setTeachingRating(0);
+        setOutcomeRating(0);
+        setProductQualityRating(0);
+        setValueRating(0);
+        setSellerCommRating(0);
       }
     } catch (error) {
       console.error("Error submitting review:", error);
       alert(error.response?.data?.message || "Failed to submit review.");
+    }
+  };
+
+  const updateArrowVisibility = useCallback(() => {
+    if (tabsContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tabsContainerRef.current;
+      setShowLeftArrow(scrollLeft > 2);
+      setShowRightArrow(scrollWidth - scrollLeft - clientWidth > 2);
+    }
+  }, []);
+
+  const handleScroll = () => {
+    updateArrowVisibility();
+  };
+
+  useEffect(() => {
+    updateArrowVisibility();
+    window.addEventListener('resize', updateArrowVisibility);
+    return () => window.removeEventListener('resize', updateArrowVisibility);
+  }, [activeChats.length, updateArrowVisibility]);
+
+  useEffect(() => {
+    const handleHistoryClickOutside = (event) => {
+      if (historyRef.current && !historyRef.current.contains(event.target)) {
+        setShowHistory(false);
+      }
+    };
+    document.addEventListener('mousedown', handleHistoryClickOutside);
+    return () => document.removeEventListener('mousedown', handleHistoryClickOutside);
+  }, []);
+
+  const scrollLeftFn = () => {
+    tabsContainerRef.current?.scrollBy({ left: -120, behavior: 'smooth' });
+  };
+
+  const scrollRightFn = () => {
+    tabsContainerRef.current?.scrollBy({ left: 120, behavior: 'smooth' });
+  };
+
+  const closeSession = async (chatId, e) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm("Are you sure you want to archive/close this session? You can restore it from Session History anytime.")) return;
+    try {
+      const res = await api.post(`/chats/${chatId}/close`);
+      if (res.data.success) {
+        const fetched = await fetchChats();
+        const rawChats = fetched?.rawChats || [];
+        const activeGroupChats = rawChats.filter(c => c.partner_id === activePartnerId);
+        
+        // Find next chat to auto-select
+        const remainingActive = activeGroupChats.filter(c => !c.is_closed);
+        if (remainingActive.length > 0) {
+          const activeSession = remainingActive.find(c => c.order_status === 'Accepted' && c.chat_status !== 'Completed' && c.chat_status !== 'Cancelled');
+          const pendingSession = remainingActive.find(c => c.order_status === 'Pending');
+          const fallback = remainingActive[remainingActive.length - 1];
+          setActiveChatId(activeSession?.chat_id || pendingSession?.chat_id || fallback?.chat_id || null);
+        } else if (activeGroupChats.length > 0) {
+          setActiveChatId(activeGroupChats[activeGroupChats.length - 1].chat_id);
+        } else {
+          setActiveChatId(null);
+        }
+      }
+    } catch (err) {
+      console.error('Error closing session:', err);
+      alert('Failed to close session.');
+    }
+  };
+
+  const restoreSession = async (chatId, e) => {
+    if (e) e.stopPropagation();
+    try {
+      const res = await api.post(`/chats/${chatId}/reopen`);
+      if (res.data.success) {
+        await fetchChats();
+        setActiveChatId(chatId);
+      }
+    } catch (err) {
+      console.error('Error restoring session:', err);
+      alert('Failed to restore session.');
     }
   };
 
@@ -365,16 +549,23 @@ const Messages = () => {
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
-              <input type="text" placeholder="Search chats..." />
+              <input 
+                type="text" 
+                placeholder="Search chats..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
 
             <div className="chat-list">
               {loading ? (
                 <div className="chat-loading">Loading chats...</div>
-              ) : partnerGroups.length === 0 ? (
-                <div className="chat-empty">No active chats.</div>
+              ) : filteredPartnerGroups.length === 0 ? (
+                <div className="chat-empty">
+                  {searchQuery.trim() ? "No chats found matching search." : "No active chats."}
+                </div>
               ) : (
-                partnerGroups.map(group => (
+                filteredPartnerGroups.map(group => (
                   <div 
                     key={group.partner_id} 
                     className={`chat-list-item ${activePartnerId === group.partner_id ? 'active' : ''}`}
@@ -382,14 +573,14 @@ const Messages = () => {
                   >
                     <div className="chat-avatar">
                       {getPartnerAvatar(group)}
-                      <span className="online-indicator"></span>
+                      {isOnline(group.partner_id) && <span className="online-indicator" />}
                     </div>
                     <div className="chat-item-info">
                       <div className="chat-item-header">
                         <span className="chat-name">{group.partner_name}</span>
                       </div>
                       <div className="chat-item-preview">
-                        {group.chats.filter(c => c.chat_status !== 'Completed' && c.chat_status !== 'Cancelled').length} Active Session(s)
+                        {group.chats.filter(c => !c.is_closed && c.chat_status !== 'Completed' && c.chat_status !== 'Cancelled').length} Active Session(s)
                       </div>
                     </div>
                   </div>
@@ -408,87 +599,258 @@ const Messages = () => {
                     </div>
                     <div className="chat-header-info">
                       <h3>{activeGroup.partner_name}</h3>
-                      <span className="status-text"><span className="online-dot"></span> Online now</span>
+                      <span className={`status-text ${isOnline(activeGroup.partner_id) ? 'online' : 'offline'}`}>
+                        <span className={isOnline(activeGroup.partner_id) ? 'online-dot' : 'offline-dot'} />
+                        {isOnline(activeGroup.partner_id) ? 'Online now' : 'Offline'}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Horizontal session tabs */}
+                {/* Horizontal session tabs with carousel */}
                 {sortedChats.length > 0 && (
-                  <div className="chat-session-tabs">
-                    {sortedChats.map(c => (
-                      <button
-                        key={c.chat_id}
-                        className={`session-tab-btn ${c.chat_id === effectiveChatId ? 'active' : ''}`}
-                        onClick={() => {
-                          setActiveChatId(c.chat_id);
-                          setUnreadSessions(prev => ({ ...prev, [c.chat_id]: false }));
-                        }}
-                      >
-                        <span className="session-tab-title">{c.item_title || 'Request'}</span>
-                        {unreadSessions[c.chat_id] && <span className="session-unread-dot" />}
-                        <span className={`session-tab-badge ${c.order_status ? c.order_status.toLowerCase() : 'active'}`}>
-                          {c.order_status || 'Active'}
-                        </span>
+                  <div className="chat-session-tabs-wrapper">
+                    {/* Left scroll arrow */}
+                    {activeChats.length > 3 && showLeftArrow && (
+                      <button className="carousel-arrow-btn left" onClick={scrollLeftFn} aria-label="Scroll left">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
                       </button>
-                    ))}
+                    )}
+
+                    <div 
+                      ref={tabsContainerRef}
+                      onScroll={handleScroll}
+                      className={`chat-session-tabs ${activeChats.length > 3 ? 'has-carousel' : ''} ${showLeftArrow ? 'fade-left' : ''} ${showRightArrow ? 'fade-right' : ''}`}
+                    >
+                      {activeChats.length === 0 ? (
+                        <div className="no-active-sessions-msg">No active sessions. Open Session History to restore.</div>
+                      ) : (
+                        activeChats.map(c => (
+                          <button
+                            key={c.chat_id}
+                            className={`session-tab-btn ${c.chat_id === effectiveChatId ? 'active' : ''}`}
+                            onClick={() => {
+                              setActiveChatId(c.chat_id);
+                              setUnreadSessions(prev => ({ ...prev, [c.chat_id]: false }));
+                            }}
+                          >
+                            <span className="session-tab-title">{c.item_title || 'Request'}</span>
+                            {unreadSessions[c.chat_id] && <span className="session-unread-dot" />}
+                            <span className={`session-tab-badge ${c.order_status ? c.order_status.toLowerCase() : 'active'}`}>
+                              {c.order_status || 'Active'}
+                            </span>
+                            <span 
+                              className="session-close-icon"
+                              onClick={(e) => closeSession(c.chat_id, e)}
+                              title="Archive Session"
+                            >
+                              ✕
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Right scroll arrow */}
+                    {activeChats.length > 3 && showRightArrow && (
+                      <button 
+                        className="carousel-arrow-btn right" 
+                        onClick={scrollRightFn} 
+                        aria-label="Scroll right"
+                        style={{ right: closedChats.length > 0 ? '7.5rem' : '0.75rem' }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      </button>
+                    )}
+
+                    {/* Session History dropdown trigger */}
+                    {closedChats.length > 0 && (
+                      <div className="session-history-wrapper" ref={historyRef}>
+                        <button 
+                          className={`history-toggle-btn ${showHistory ? 'active' : ''}`}
+                          onClick={() => setShowHistory(!showHistory)}
+                          title="Session History"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3"></path><circle cx="12" cy="12" r="10"></circle></svg>
+                          History ({closedChats.length})
+                        </button>
+                        
+                        {showHistory && (
+                          <div className="session-history-dropdown">
+                            <div className="history-dropdown-header">
+                              <h4>Closed Sessions</h4>
+                            </div>
+                            <div className="history-dropdown-list">
+                              {closedChats.map(c => (
+                                <div 
+                                  key={c.chat_id}
+                                  className={`history-item-pill ${c.chat_id === effectiveChatId ? 'selected' : ''}`}
+                                  onClick={() => {
+                                    setActiveChatId(c.chat_id);
+                                    setShowHistory(false);
+                                  }}
+                                >
+                                  <div className="history-item-details">
+                                    <span className="history-item-title">{c.item_title || 'Request'}</span>
+                                    <span className={`session-tab-badge ${c.order_status ? c.order_status.toLowerCase() : 'active'}`}>
+                                      {c.order_status || 'Active'}
+                                    </span>
+                                  </div>
+                                  <button 
+                                    className="session-restore-btn"
+                                    onClick={(e) => restoreSession(c.chat_id, e)}
+                                    title="Restore Session"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Fixed session details/actions bar */}
                 {currentChat && (
-                  <div className="chat-session-info-bar">
-                    <div className="session-info-meta">
-                      <span className="session-info-type">{currentChat.item_type || 'Request'}</span>
-                      <h4 className="session-info-title">{currentChat.item_title || 'Request'}</h4>
-                      {currentChat.chat_status === 'Completed' || currentChat.order_status === 'Completed' ? (
-                        <span className="session-badge completed">Completed</span>
-                      ) : currentChat.chat_status === 'Cancelled' || currentChat.order_status === 'Cancelled' ? (
-                        <span className="session-badge cancelled">Cancelled</span>
-                      ) : currentChat.order_status === 'Pending' ? (
-                        <span className="session-badge pending">Pending</span>
-                      ) : (
-                        <span className="session-badge active">Active</span>
-                      )}
-                    </div>
-                    <div className="session-info-actions">
-                      {/* Mark as Completed */}
-                      {currentChat.chat_status === 'Active' && currentChat.order_status === 'Accepted' && (
-                        <button 
-                          className="session-header-action-btn complete-btn" 
-                          onClick={() => markCompleted(currentChat.chat_id)}
-                        >
-                          Mark as Completed
-                        </button>
-                      )}
-                      
-                      {/* Cancel Request */}
-                      {currentChat.chat_status === 'Active' && (currentChat.order_status === 'Accepted' || currentChat.order_status === 'Pending') && (
-                        <button 
-                          className="session-header-action-btn cancel-btn" 
-                          onClick={() => cancelOrder(currentChat.order_id)}
-                        >
-                          Cancel Request
-                        </button>
-                      )}
-                      
-                      {/* Leave a Review */}
-                      {(currentChat.chat_status === 'Completed' || currentChat.order_status === 'Completed') && (
-                        <button 
-                          className="session-header-action-btn review-btn" 
-                          onClick={() => { setReviewOrderId(currentChat.order_id); setReviewModalOpen(true); }}
-                        >
-                          Leave a Review
-                        </button>
-                      )}
-                      
-                      {/* Report */}
+                  <div className={`chat-session-info-bar ${detailsExpanded ? 'expanded' : 'collapsed'}`}>
+                    <div className="session-info-header-row">
+                      <div className="session-info-meta-basic">
+                        <span className="session-info-type">{currentChat.item_type || 'Request'}</span>
+                        <h4 className="session-info-title">{currentChat.item_title || 'Request'}</h4>
+                        {currentChat.chat_status === 'Completed' || currentChat.order_status === 'Completed' ? (
+                          <span className="session-badge completed">Completed</span>
+                        ) : currentChat.chat_status === 'Cancelled' || currentChat.order_status === 'Cancelled' ? (
+                          <span className="session-badge cancelled">Cancelled</span>
+                        ) : currentChat.order_status === 'Pending' ? (
+                          <span className="session-badge pending">Pending</span>
+                        ) : (
+                          <span className="session-badge active">Active</span>
+                        )}
+                      </div>
                       <button 
-                        className="session-header-action-btn report-btn" 
-                        onClick={() => { setReportModalOpen(true); }}
+                        className={`session-details-toggle-btn ${detailsExpanded ? 'expanded' : 'collapsed'}`}
+                        onClick={() => setDetailsExpanded(!detailsExpanded)}
+                        title={detailsExpanded ? "Hide Details" : "Show Details"}
+                        aria-label={detailsExpanded ? "Hide Details" : "Show Details"}
+                        aria-expanded={detailsExpanded}
                       >
-                        Report
+                        <svg className="toggle-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
                       </button>
+                    </div>
+
+                    <div className={`session-info-details-row ${detailsExpanded ? 'expanded' : 'collapsed'}`}>
+                      {/* Booking details for service/skill sessions */}
+                      {(currentChat.item_type === 'service' || currentChat.item_type === 'skill') && (
+                        <div className="session-info-badges-container">
+                          {currentChat.selected_plan_type && (
+                            <span className="session-info-badge plan-badge">
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+                              {currentChat.selected_plan_type}{currentChat.selected_price ? ` · ₹${currentChat.selected_price}` : ''}
+                            </span>
+                          )}
+                          {currentChat.booking_date && (
+                            <span className={`session-info-badge ${currentChat.item_type === 'skill' ? 'skill-date-badge' : 'date-badge'}`}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                              {new Date(currentChat.booking_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })}
+                            </span>
+                          )}
+                          {currentChat.booking_slot && (
+                            <span className={`session-info-badge ${currentChat.item_type === 'skill' ? 'skill-slot-badge' : 'slot-badge'}`}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                              {currentChat.booking_slot}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {currentChat.item_type === 'skill' && (currentChat.user_skill_level || currentChat.learning_goal || currentChat.preferred_schedule) && (
+                        <div className="session-skill-details-panel" style={{
+                          marginTop: '10px',
+                          marginBottom: '10px',
+                          padding: '12px 14px',
+                          backgroundColor: '#F9F5FF',
+                          borderLeft: '3px solid #7E22CE',
+                          borderRadius: '6px',
+                          fontSize: '0.8rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px',
+                          color: '#581C87',
+                          width: '100%',
+                          textAlign: 'left',
+                          boxSizing: 'border-box'
+                        }}>
+                          {currentChat.user_skill_level && (
+                            <div>
+                              <strong style={{ color: '#7E22CE', marginRight: '6px' }}>Target Skill Level:</strong>
+                              <span style={{ textTransform: 'capitalize', color: '#1E1B4B' }}>{currentChat.user_skill_level}</span>
+                            </div>
+                          )}
+                          {currentChat.learning_goal && (
+                            <div>
+                              <strong style={{ color: '#7E22CE', marginRight: '6px' }}>Learning Goal:</strong>
+                              <span style={{ color: '#1E1B4B', lineHeight: '1.4' }}>{currentChat.learning_goal}</span>
+                            </div>
+                          )}
+                          {currentChat.preferred_schedule && (
+                            <div>
+                              <strong style={{ color: '#7E22CE', marginRight: '6px' }}>Preferred Schedule:</strong>
+                              <span style={{ color: '#1E1B4B' }}>{currentChat.preferred_schedule}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <div className="session-info-actions">
+                        {/* Mark as Completed */}
+                        {currentChat.chat_status === 'Active' && currentChat.order_status === 'Accepted' && (
+                          <button 
+                            className="session-header-action-btn complete-btn" 
+                            onClick={() => markCompleted(currentChat.chat_id)}
+                          >
+                            Mark as Completed
+                          </button>
+                        )}
+                        
+                        {/* Cancel Request */}
+                        {currentChat.chat_status === 'Active' && (currentChat.order_status === 'Accepted' || currentChat.order_status === 'Pending') && (
+                          <button 
+                            className="session-header-action-btn cancel-btn" 
+                            onClick={() => cancelOrder(currentChat.order_id)}
+                          >
+                            Cancel Request
+                          </button>
+                        )}
+                        
+                        {/* Leave a Review */}
+                        {(currentChat.chat_status === 'Completed' || currentChat.order_status === 'Completed') && (
+                          <button 
+                            className="session-header-action-btn review-btn" 
+                            onClick={() => {
+                              setReviewOrderId(currentChat.order_id);
+                              setReviewRating(5);
+                              setCommunicationRating(0);
+                              setTeachingRating(0);
+                              setOutcomeRating(0);
+                              setReviewText('');
+                              setReviewModalOpen(true);
+                            }}
+                          >
+                            Leave a Review
+                          </button>
+                        )}
+                        
+                        {/* Report */}
+                        <button 
+                          className="session-header-action-btn report-btn" 
+                          onClick={() => { setReportModalOpen(true); }}
+                        >
+                          Report
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -558,7 +920,9 @@ const Messages = () => {
                   </form>
                 ) : (
                   <div className="chat-input-disabled">
-                    {currentChat?.order_status === 'Pending' ? (
+                    {currentChat?.chat_status === 'Restricted' ? (
+                      <span>This conversation has been restricted by an admin. Chat is disabled.</span>
+                    ) : currentChat?.order_status === 'Pending' ? (
                       <span>Chat will become active once the seller accepts your request.</span>
                     ) : currentChat?.chat_status === 'Cancelled' || currentChat?.order_status === 'Cancelled' ? (
                       <span>This order has been cancelled. Chat is disabled.</span>
@@ -601,30 +965,166 @@ const Messages = () => {
         {/* Review Modal */}
         {reviewModalOpen && (
           <div className="modal-overlay">
-            <div className="modal-content">
+            <div className="modal-content" style={{ maxWidth: '480px', width: '90%' }}>
               <h3>Leave a Review</h3>
               <p>Rate your experience with this order.</p>
-              <div className="rating-selector">
-                {[1,2,3,4,5].map(star => (
-                  <svg 
-                    key={star}
-                    onClick={() => setReviewRating(star)}
-                    width="32" height="32" viewBox="0 0 24 24" 
-                    fill={star <= reviewRating ? "#F59E0B" : "none"} 
-                    stroke={star <= reviewRating ? "#F59E0B" : "#D1D5DB"} 
-                    strokeWidth="2"
-                    style={{cursor:'pointer', margin: '0 4px'}}
-                  >
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                  </svg>
-                ))}
+              
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#4B5563' }}>Overall Rating</span>
+                <div className="rating-selector" style={{ display: 'flex', justifyContent: 'center' }}>
+                  {[1,2,3,4,5].map(star => (
+                    <svg 
+                      key={star}
+                      onClick={() => setReviewRating(star)}
+                      width="32" height="32" viewBox="0 0 24 24" 
+                      fill={star <= reviewRating ? "#F59E0B" : "none"} 
+                      stroke={star <= reviewRating ? "#F59E0B" : "#D1D5DB"} 
+                      strokeWidth="2"
+                      style={{cursor:'pointer', margin: '0 4px'}}
+                    >
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                  ))}
+                </div>
               </div>
+
+              {currentChat?.item_type === 'skill' && (
+                <div className="ord-graded-metrics" style={{
+                  backgroundColor: '#F9FAFB',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  width: '100%',
+                  marginBottom: '16px',
+                  boxSizing: 'border-box'
+                }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', textAlign: 'left', display: 'block' }}>
+                    Session Graded Metrics
+                  </span>
+                  
+                  {/* Communication Rating */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: '600', color: '#374151' }}>Communication</span>
+                    <div style={{ display: 'flex', gap: '3px' }}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <svg
+                          key={star}
+                          onClick={() => setCommunicationRating(star)}
+                          onMouseEnter={() => setCommHover(star)}
+                          onMouseLeave={() => setCommHover(0)}
+                          width="20" height="20" viewBox="0 0 24 24" 
+                          fill={star <= (commHover || communicationRating) ? "#F59E0B" : "none"} 
+                          stroke={star <= (commHover || communicationRating) ? "#F59E0B" : "#D1D5DB"} 
+                          strokeWidth="2"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Teaching Quality Rating */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: '600', color: '#374151' }}>Teaching Quality</span>
+                    <div style={{ display: 'flex', gap: '3px' }}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <svg
+                          key={star}
+                          onClick={() => setTeachingRating(star)}
+                          onMouseEnter={() => setTeachHover(star)}
+                          onMouseLeave={() => setTeachHover(0)}
+                          width="20" height="20" viewBox="0 0 24 24" 
+                          fill={star <= (teachHover || teachingRating) ? "#F59E0B" : "none"} 
+                          stroke={star <= (teachHover || teachingRating) ? "#F59E0B" : "#D1D5DB"} 
+                          strokeWidth="2"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Learning Outcomes Rating */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: '600', color: '#374151' }}>Learning Outcomes</span>
+                    <div style={{ display: 'flex', gap: '3px' }}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <svg
+                          key={star}
+                          onClick={() => setOutcomeRating(star)}
+                          onMouseEnter={() => setOutcomeHover(star)}
+                          onMouseLeave={() => setOutcomeHover(0)}
+                          width="20" height="20" viewBox="0 0 24 24" 
+                          fill={star <= (outcomeHover || outcomeRating) ? "#F59E0B" : "none"} 
+                          stroke={star <= (outcomeHover || outcomeRating) ? "#F59E0B" : "#D1D5DB"} 
+                          strokeWidth="2"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {currentChat?.item_type === 'product' && (
+                <div style={{
+                  backgroundColor: '#F0F9FF',
+                  border: '1px solid #BAE6FD',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  width: '100%',
+                  marginBottom: '16px',
+                  boxSizing: 'border-box'
+                }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#0369A1', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', textAlign: 'left', display: 'block' }}>
+                    🛡️ Verified Purchase Metrics
+                  </span>
+                  {[
+                    { label: 'Product Quality', val: productQualityRating, hover: productQualityHover, setVal: setProductQualityRating, setHover: setProductQualityHover },
+                    { label: 'Value for Money', val: valueRating, hover: valueHover, setVal: setValueRating, setHover: setValueHover },
+                    { label: 'Seller Communication', val: sellerCommRating, hover: sellerCommHover, setVal: setSellerCommRating, setHover: setSellerCommHover }
+                  ].map(({ label, val, hover, setVal, setHover }) => (
+                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: '600', color: '#0C4A6E' }}>{label}</span>
+                      <div style={{ display: 'flex', gap: '3px' }}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <svg key={star}
+                            onClick={() => setVal(star)}
+                            onMouseEnter={() => setHover(star)}
+                            onMouseLeave={() => setHover(0)}
+                            width="20" height="20" viewBox="0 0 24 24"
+                            fill={star <= (hover || val) ? "#F59E0B" : "none"}
+                            stroke={star <= (hover || val) ? "#F59E0B" : "#D1D5DB"}
+                            strokeWidth="2"
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                          </svg>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <textarea 
                 value={reviewText} 
                 onChange={e => setReviewText(e.target.value)}
                 placeholder="Write your review..."
                 rows="4"
+                style={{ width: '100%', boxSizing: 'border-box' }}
               ></textarea>
+              
               <div className="modal-actions">
                 <button className="btn-secondary" onClick={() => setReviewModalOpen(false)}>Cancel</button>
                 <button className="btn-primary" onClick={submitReview}>Submit Review</button>

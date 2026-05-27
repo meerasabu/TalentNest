@@ -47,6 +47,50 @@ router.post('/', verifyToken, async (req, res) => {
   }
 });
 
+// GET /api/chats/unread/count - Get unread message count for authenticated user
+router.get('/unread/count', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const result = await pool.query(`
+      SELECT COUNT(*) AS count
+      FROM messages m
+      JOIN chats c ON m.chat_id = c.chat_id
+      WHERE (c.buyer_id = $1 OR c.seller_id = $1)
+        AND m.sender_id != $1
+        AND m.is_read = FALSE
+    `, [userId]);
+    res.status(200).json({ success: true, count: parseInt(result.rows[0].count, 10) });
+  } catch (error) {
+    console.error('Error fetching unread count:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
+// POST /api/chats/chat/:chatId/read - Mark messages in a chat as read
+router.post('/chat/:chatId/read', verifyToken, async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const userId = req.user.id;
+
+    await pool.query(`
+      UPDATE messages
+      SET is_read = TRUE
+      WHERE chat_id = $1 AND sender_id != $2 AND is_read = FALSE
+    `, [chatId, userId]);
+
+    // Broadcast the unread counts update
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${userId}`).emit('messages_read', { chatId });
+    }
+
+    res.status(200).json({ success: true, message: 'Messages marked as read' });
+  } catch (error) {
+    console.error('Error marking messages as read:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
 // GET /api/chats/:userId - Get all active chats for a user
 router.get('/:userId', verifyToken, async (req, res) => {
   try {
@@ -55,8 +99,11 @@ router.get('/:userId', verifyToken, async (req, res) => {
     // Join with users table to get partner info, and orders to get item info
     const result = await pool.query(`
       SELECT 
-        c.chat_id, c.order_id, c.created_at, c.status as chat_status,
+        c.chat_id, c.order_id, c.created_at, c.status as chat_status, c.is_closed,
         o.item_type, o.item_id, o.status as order_status,
+        o.selected_plan_type, o.selected_price,
+        o.booking_date, o.booking_slot,
+        o.learning_goal, o.preferred_schedule, o.user_skill_level,
         CASE 
           WHEN c.buyer_id = $1 THEN seller.id 
           ELSE buyer.id 
@@ -73,11 +120,12 @@ router.get('/:userId', verifyToken, async (req, res) => {
       JOIN orders o ON c.order_id = o.id
       JOIN users buyer ON c.buyer_id = buyer.id
       JOIN users seller ON c.seller_id = seller.id
-      WHERE c.buyer_id = $1 OR c.seller_id = $1
+      WHERE (c.buyer_id = $1 OR c.seller_id = $1) AND (c.status IS NULL OR c.status != 'Restricted')
       ORDER BY c.created_at DESC
     `, [userId]);
 
     const chats = result.rows;
+
 
     // We also want to fetch the item title based on item_type and item_id
     // To avoid complex SQL logic, we'll fetch them in parallel JS
@@ -142,6 +190,26 @@ router.post('/chat/:chatId/messages', verifyToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Chat not found' });
     }
 
+    // Verify sender account status
+    const senderRes = await pool.query('SELECT account_status, suspended_until FROM users WHERE id = $1', [senderId]);
+    if (senderRes.rows.length > 0) {
+      const sender = senderRes.rows[0];
+      if (sender.account_status === 'Suspended') {
+        if (!sender.suspended_until || new Date(sender.suspended_until) > new Date()) {
+          return res.status(403).json({ success: false, message: 'Your messaging access has been suspended.' });
+        } else {
+          // Suspension expired, update status back to 'Active'
+          await pool.query("UPDATE users SET account_status = 'Active', suspended_until = NULL WHERE id = $1", [senderId]);
+        }
+      }
+    }
+
+    // Verify chat status is not Restricted
+    const chat = chatRes.rows[0];
+    if (chat.status === 'Restricted') {
+      return res.status(403).json({ success: false, message: 'This conversation has been restricted by an admin.' });
+    }
+
     const result = await pool.query(
       'INSERT INTO messages (chat_id, sender_id, message_text) VALUES ($1, $2, $3) RETURNING *',
       [chatId, senderId, text]
@@ -197,15 +265,16 @@ router.post('/:chatId/complete', verifyToken, async (req, res) => {
 // POST /api/chats/report - Report a conversation
 router.post('/report', verifyToken, async (req, res) => {
   try {
-    const { reporterId, reportedId, reason } = req.body;
+    const { reporterId, reportedId, reason, chatId, itemId, itemType } = req.body;
     
     if (!reporterId || !reportedId || !reason) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
     await pool.query(
-      'INSERT INTO reports (reporter_id, reported_id, reason) VALUES ($1, $2, $3)',
-      [reporterId, reportedId, reason]
+      `INSERT INTO reports (reporter_id, reported_id, reason, chat_id, item_id, item_type) 
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [reporterId, reportedId, reason, chatId || null, itemId || null, itemType || null]
     );
 
     res.status(201).json({ success: true, message: 'Report submitted successfully' });
@@ -232,6 +301,30 @@ router.get('/user/:userId/partner/:partnerId/messages', verifyToken, async (req,
     res.status(200).json({ success: true, messages: result.rows });
   } catch (error) {
     console.error('Error fetching partner messages:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
+// POST /api/chats/:chatId/close - Close/archive a chat session
+router.post('/:chatId/close', verifyToken, async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    await pool.query('UPDATE chats SET is_closed = TRUE WHERE chat_id = $1', [chatId]);
+    res.status(200).json({ success: true, message: 'Session closed/archived successfully' });
+  } catch (error) {
+    console.error('Error closing session:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
+// POST /api/chats/:chatId/reopen - Reopen/restore a chat session
+router.post('/:chatId/reopen', verifyToken, async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    await pool.query('UPDATE chats SET is_closed = FALSE WHERE chat_id = $1', [chatId]);
+    res.status(200).json({ success: true, message: 'Session restored successfully' });
+  } catch (error) {
+    console.error('Error reopening session:', error);
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 });

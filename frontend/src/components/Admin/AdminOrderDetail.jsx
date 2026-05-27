@@ -9,20 +9,31 @@ const AdminOrderDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = React.useMemo(() => {
-    return location.state?.user || JSON.parse(localStorage.getItem('user'));
+    try {
+      return location.state?.user || JSON.parse(localStorage.getItem('user'));
+    } catch (e) {
+      return null;
+    }
   }, [location.state?.user]);
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const userRole = user?.role;
+
+  // Route protection
   useEffect(() => {
-    if (!user || user.role !== 'admin') {
+    if (!userRole || userRole !== 'admin') {
       navigate('/login');
-    } else {
+    }
+  }, [userRole, navigate]);
+
+  useEffect(() => {
+    if (userRole === 'admin') {
       fetchOrderDetail();
     }
-  }, [id, user]);
+  }, [id, userRole]);
 
   const fetchOrderDetail = async () => {
     setLoading(true);

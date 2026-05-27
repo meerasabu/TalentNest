@@ -226,22 +226,52 @@ const Marketplace = () => {
                  </div>
 
                  <div className="market-card-body">
-                   <h3 className="prod-title">{prod.title}</h3>
-                   <div className="prod-rating">
-                      <svg width="12" height="12" fill="#FBBF24" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                      <span className="rating-num">{prod.rating || '0.0'}</span>
-                      <span className="rating-revs">({prod.reviews || 0})</span>
-                   </div>
-                   
-                   <div className="prod-price">₹{prod.price}</div>
-                   
-                   <p className="prod-meta">{prod.category} • Today</p>
+                    <h3 className="prod-title">{prod.title}</h3>
+                    <div className="prod-rating">
+                       <span style={{ color: '#FBBF24', fontSize: '0.75rem', marginRight: '2px' }}>⭐</span>
+                       <span className="rating-num">{prod.rating ? parseFloat(prod.rating).toFixed(1) : '0.0'}</span>
+                       <span className="rating-revs">({prod.reviews || 0} {prod.reviews === 1 ? 'Review' : 'Reviews'})</span>
+                    </div>
+                    
+                    <div className="prod-seller-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
+                      {prod.profile_image ? (
+                        <img 
+                          src={`http://localhost:5000${prod.profile_image}`} 
+                          alt={prod.first_name} 
+                          style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover' }} 
+                        />
+                      ) : (
+                        <div 
+                          style={{ 
+                            width: '20px', 
+                            height: '20px', 
+                            borderRadius: '50%', 
+                            backgroundColor: '#E5E7EB', 
+                            color: '#4B5563', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            fontSize: '9px', 
+                            fontWeight: 'bold' 
+                          }}
+                        >
+                          {prod.first_name?.[0]?.toUpperCase() || 'U'}
+                        </div>
+                      )}
+                      <span style={{ fontSize: '0.75rem', color: '#4B5563' }}>
+                        by <strong>{prod.first_name} {prod.last_name?.charAt(0)}.</strong>
+                      </span>
+                    </div>
+                    
+                    <div className="prod-price">₹{prod.price}</div>
+                    
+                    <p className="prod-meta">{prod.category} • Today</p>
 
-                   <button className="prod-request-btn">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                      Request-based purchase via chat
-                   </button>
-                 </div>
+                    <button className="prod-request-btn">
+                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                       Request-based purchase via chat
+                    </button>
+                  </div>
               </div>
             ))}
           </div>
