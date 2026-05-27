@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
 import api from '../../api/axiosConfig';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from '../Common/Sidebar';
@@ -230,7 +229,7 @@ const Profile = () => {
             <div key={prod.id} className="prof-skill-card" onClick={() => navigate(`/product/${prod.id}`, { state: { user } })} style={{cursor: 'pointer'}}>
               <div className="prof-img-container">
                 {prod.image_urls && prod.image_urls.length > 0 ? (
-                  <img src={`http://localhost:5000${prod.image_urls[0]}`} alt={prod.title} className="prof-sk-ava" />
+                  <img src={window.getImageUrl(prod.image_urls[0])} alt={prod.title} className="prof-sk-ava" />
                 ) : (
                   <img src="https://placehold.co/90x90/e2e8f0/475569?text=Prod" alt="Product" className="prof-sk-ava" />
                 )}
@@ -285,7 +284,7 @@ const Profile = () => {
             <div key={skill.id} className="prof-skill-card" onClick={() => navigate(`/skill/${skill.id}`, { state: { user } })} style={{cursor: 'pointer'}}>
               <div className="prof-img-container">
                 {skill.image_urls && skill.image_urls.length > 0 ? (
-                  <img src={`http://localhost:5000${skill.image_urls[0]}`} alt={skill.title} className="prof-sk-ava" />
+                  <img src={window.getImageUrl(skill.image_urls[0])} alt={skill.title} className="prof-sk-ava" />
                 ) : (
                   <img src="https://placehold.co/90x90/3b82f6/fff?text=Skill" alt="Skill" className="prof-sk-ava" />
                 )}
@@ -351,7 +350,7 @@ const Profile = () => {
             <div key={service.id} className="prof-skill-card" onClick={() => navigate(`/service/${service.id}`, { state: { user } })} style={{cursor: 'pointer'}}>
               <div className="prof-img-container">
                 {service.image_urls && service.image_urls.length > 0 ? (
-                  <img src={`http://localhost:5000${service.image_urls[0]}`} alt={service.title} className="prof-sk-ava" />
+                  <img src={window.getImageUrl(service.image_urls[0])} alt={service.title} className="prof-sk-ava" />
                 ) : (
                   <img src="https://placehold.co/90x90/1f2937/fff?text=Srvc" alt="Service" className="prof-sk-ava" />
                 )}
@@ -410,7 +409,7 @@ const Profile = () => {
                  <div className="prof-rev-header">
                    <div className="rev-user-grp">
                      {rev.profile_image ? (
-                       <img src={`http://localhost:5000${rev.profile_image}`} alt="Reviewer" className="rev-ava" />
+                       <img src={window.getImageUrl(rev.profile_image)} alt="Reviewer" className="rev-ava" />
                      ) : (
                        <img src="https://placehold.co/40x40" alt="Reviewer" className="rev-ava" />
                      )}
@@ -466,10 +465,10 @@ const Profile = () => {
           
            {/* Top Floating Context Container */}
            <div className="prof-top-block">
-              <img src={user.bannerImage ? `http://localhost:5000${user.bannerImage}` : "https://placehold.co/1200x260/0284c7/ecf0f1"} alt="Banner" className="prof-banner" />
+              <img src={profileUser.bannerImage ? window.getImageUrl(profileUser.bannerImage) : "https://placehold.co/1200x260/0284c7/ecf0f1"} alt="Banner" className="prof-banner" />
               <div className="prof-info-sect">
                 <div className="prof-avatar-halo">
-                  <img src={user.profileImage ? `http://localhost:5000${user.profileImage}` : "https://placehold.co/150x150"} alt="Avatar" className="prof-main-ava" />
+                  <img src={profileUser.profileImage ? window.getImageUrl(profileUser.profileImage) : "https://placehold.co/150x150"} alt="Avatar" className="prof-main-ava" />
                 </div>
                 
                 <div className="prof-desc-grp">

@@ -1436,13 +1436,12 @@
 .skill-rating {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  justify-content: center;
   background-color: #FEF3C7;
   color: #D97706;
-  padding: 0.25rem 0.5rem;
+  width: 24px;
+  height: 24px;
   border-radius: 6px;
-  font-size: 0.72rem;
-  font-weight: 700;
   border: 1px solid #FDE68A;
 }
 
@@ -1528,6 +1527,16 @@
 
   .main-header {
     padding-left: 4.25rem !important; /* spacing offset to prevent overlap with floating hamburger */
+  }
+
+  .content-scrollable {
+    padding: 1rem 0.75rem !important;
+  }
+
+  .welcome-banner {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem !important;
   }
 
   /* Make sure tooltip arrow points correctly or is offset */

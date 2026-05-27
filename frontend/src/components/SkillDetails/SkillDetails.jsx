@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/axiosConfig';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useNavigate, useLocation, useParams, Navigate } from 'react-router-dom';
 import Sidebar from '../Common/Sidebar';
 import '../Dashboard/Index.css'; 
 import './SkillDetails.css';
@@ -27,7 +27,12 @@ const SkillDetails = () => {
   const location = useLocation();
   const { id } = useParams();
   
-  const user = location.state?.user || JSON.parse(localStorage.getItem('user')) || { id: 5, firstName: 'Student', lastName: '', email: 'student@university.edu' };
+  const user = location.state?.user || JSON.parse(localStorage.getItem('user'));
+  const token = localStorage.getItem('token');
+
+  if (!user || !token || token === 'undefined') {
+    return <Navigate to="/login" />;
+  }
   const handlePrefix = user.email ? user.email.split('@')[0].toUpperCase() : '';
 
   const [skill, setSkill] = useState(null);
@@ -202,7 +207,7 @@ const SkillDetails = () => {
   });
 
   const mainImageUrl = skill.image_urls && skill.image_urls.length > 0 
-    ? `http://localhost:5000${skill.image_urls[0]}` 
+    ? window.getImageUrl(skill.image_urls[0]) 
     : 'https://placehold.co/1200x500/e6e3df/a39589?text=Skill';
 
   // Badges calculation
@@ -251,7 +256,7 @@ const SkillDetails = () => {
                 <span className="sk-hero-tag" style={{textTransform: 'uppercase'}}>{skill.category}</span>
                 <h1 className="sk-hero-title">{skill.title}</h1>
                 <div className="sk-hero-meta">
-                  <span><span className="sk-rate-star">★</span> {avgRating} ({totalReviews} Reviews)</span>
+                  <span><span className="sk-rate-star">★</span> ({totalReviews} Reviews)</span>
                   <span>•</span>
                   <span>
                     <svg style={{display:'inline', marginRight:'4px', verticalAlign:'sub'}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -410,7 +415,7 @@ const SkillDetails = () => {
                     <h3>Media & Demos Showcase</h3>
                     <div className="demo-showcase-gallery">
                       {skill.demo_media.map((mediaPath, index) => {
-                        const fileUrl = `http://localhost:5000${mediaPath}`;
+                        const fileUrl = window.getImageUrl(mediaPath);
                         const isVideo = mediaPath.toLowerCase().endsWith('.mp4') || 
                                         mediaPath.toLowerCase().endsWith('.mov') ||
                                         mediaPath.toLowerCase().endsWith('.webm');
@@ -525,7 +530,7 @@ const SkillDetails = () => {
                           <div className="rev-head">
                             <div className="rev-user-grp">
                               <img 
-                                src={r.profile_image ? `http://localhost:5000${r.profile_image}` : `https://placehold.co/40x40/555/fff?text=${r.first_name?.[0] || 'S'}`} 
+                                src={r.profile_image ? window.getImageUrl(r.profile_image) : `https://placehold.co/40x40/555/fff?text=${r.first_name?.[0] || 'S'}`} 
                                 alt={r.first_name} 
                                 style={{width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover'}} 
                               />
@@ -575,7 +580,7 @@ const SkillDetails = () => {
                 
                 {/* Tutor info & badges card */}
                 <div className="sk-seller-card">
-                  <img src={skill.profile_image ? `http://localhost:5000${skill.profile_image}` : `https://placehold.co/80x80/222/fff?text=${skill.first_name?.[0] || 'U'}${skill.last_name?.[0] || ''}`} alt={skill.first_name} className="sk-seller-avatar" style={{objectFit: 'cover'}} />
+                  <img src={skill.profile_image ? window.getImageUrl(skill.profile_image) : `https://placehold.co/80x80/222/fff?text=${skill.first_name?.[0] || 'U'}${skill.last_name?.[0] || ''}`} alt={skill.first_name} className="sk-seller-avatar" style={{objectFit: 'cover'}} />
                   
                   <div className="mentor-title-verification">
                     <h4 className="sk-seller-name">{skill.first_name} {skill.last_name}</h4>
@@ -659,31 +664,6 @@ const SkillDetails = () => {
                 </div>
 
               </div>
-            </div>
-
-            {/* Similar Skills */}
-            <div className="sk-similar-head">
-              <h2 style={{fontSize: '1.25rem', fontWeight: 700, margin: 0}}>Similar Skills</h2>
-              <span className="sk-view-all" onClick={() => navigate('/skills', { state: { user }})}>View all ›</span>
-            </div>
-            
-            <div className="sk-similar-grid">
-              {[
-                { title: "Python for Data Science", cat: "Programming", rate: "4.8", bg: "https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=500&auto=format&fit=crop&q=60", author: "Mike Chen" },
-                { title: "UI/UX Design Basics", cat: "Design", rate: "4.9", bg: "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=500&auto=format&fit=crop&q=60", author: "Lisa Park" },
-                { title: "Spanish Conversation", cat: "Languages", rate: "4.7", bg: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500&auto=format&fit=crop&q=60", author: "Diego M." }
-              ].map((sim, i) => (
-                <div key={i} className="sk-sim-card">
-                  <img src={sim.bg} className="sk-sim-img" alt={sim.title} />
-                  <div className="sk-sim-overlay">
-                    <h4 className="sk-sim-title">{sim.title}</h4>
-                    <div className="sk-sim-bottom">
-                      <span className="sk-sim-author">by {sim.author}</span>
-                      <span className="sk-sim-rate">★ {sim.rate}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
             </div>
 
           </div>

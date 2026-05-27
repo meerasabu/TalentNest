@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
-import axios from 'axios';
 import api from '../../api/axiosConfig';
 import '../Dashboard/Index.css'; 
 import './EditProfile.css';
@@ -52,8 +51,8 @@ const EditProfile = () => {
     const [loading, setLoading] = useState(false);
 
     // Image states
-    const [profileImgPreview, setProfileImgPreview] = useState(user.profileImage ? `http://localhost:5000${user.profileImage}` : 'https://placehold.co/150x150');
-    const [bannerImgPreview, setBannerImgPreview] = useState(user.bannerImage ? `http://localhost:5000${user.bannerImage}` : 'https://placehold.co/1200x260/0284c7/ecf0f1');
+    const [profileImgPreview, setProfileImgPreview] = useState(user.profileImage ? window.getImageUrl(user.profileImage) : 'https://placehold.co/150x150');
+    const [bannerImgPreview, setBannerImgPreview] = useState(user.bannerImage ? window.getImageUrl(user.bannerImage) : 'https://placehold.co/1200x260/0284c7/ecf0f1');
     const [profileImgFile, setProfileImgFile] = useState(null);
     const [bannerImgFile, setBannerImgFile] = useState(null);
 
@@ -115,6 +114,8 @@ const EditProfile = () => {
             });
 
             if (response.data.success) {
+                // Update localStorage so refreshes show the latest data
+                localStorage.setItem('user', JSON.stringify(response.data.user));
                 alert('Profile updated successfully!');
                 navigate('/profile', { state: { user: response.data.user } });
             }

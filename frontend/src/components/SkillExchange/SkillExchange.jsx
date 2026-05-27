@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import api from '../../api/axiosConfig';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from '../Common/Sidebar';
@@ -114,7 +113,7 @@ const SkillExchange = () => {
     e.stopPropagation();
     try {
       const res = await api.post('/wishlist', {
-        userId: user.id || 5,
+        userId: user.id,
         itemType: 'skill',
         itemId
       });
@@ -267,14 +266,14 @@ const SkillExchange = () => {
                    <div key={skill.id} className="sk-card" onClick={() => navigate(`/skill/${skill.id}`, { state: { user } })} style={{cursor: 'pointer'}}>
                      <div className="sk-img-layer">
                        {skill.image_urls && skill.image_urls.length > 0 ? (
-                         <img src={`http://localhost:5000${skill.image_urls[0]}`} alt={skill.title} className="sk-img"/>
+                         <img src={window.getImageUrl(skill.image_urls[0])} alt={skill.title} className="sk-img"/>
                        ) : (
                          <div className="sk-img sk-gradient-bg"></div>
                        )}
-                       <div className="sk-img-overlay">
-                          <span className="sk-tag-cat">{skill.category}</span>
-                          <span className="sk-tag-rate"><span className="sk-rate-star">★</span> {parseFloat(skill.rating || 0).toFixed(1)} <span style={{ opacity: 0.8, fontSize: '0.78em' }}>({skill.review_count || 0})</span></span>
-                       </div>
+                        <div className="sk-img-overlay">
+                           <span className="sk-tag-cat">{skill.category}</span>
+                           <span className="sk-tag-rate"><span className="sk-rate-star">★</span> <span style={{ opacity: 0.8, fontSize: '0.78em' }}>({skill.review_count || 0})</span></span>
+                        </div>
                        {skill.status && (
                          <span style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>
                            {skill.status}
@@ -288,7 +287,7 @@ const SkillExchange = () => {
                        <h3 className="sk-card-title">{skill.title}</h3>
                        
                        <div className="sk-author-row">
-                         <img src={skill.profile_image ? `http://localhost:5000${skill.profile_image}` : "https://placehold.co/24x24/e2e8f0/e2e8f0"} alt="Avatar" className="sk-auth-ava" style={{objectFit: 'cover'}}/>
+                         <img src={skill.profile_image ? window.getImageUrl(skill.profile_image) : "https://placehold.co/24x24/e2e8f0/e2e8f0"} alt="Avatar" className="sk-auth-ava" style={{objectFit: 'cover'}}/>
                          <span className="sk-auth-lbl">by <strong>{skill.first_name} {skill.last_name?.charAt(0)}.</strong></span>
                        </div>
 

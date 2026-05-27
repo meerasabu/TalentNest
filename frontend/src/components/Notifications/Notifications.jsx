@@ -107,7 +107,7 @@ const Notifications = () => {
               withPerson: `${o.seller_first_name} ${o.seller_last_name || ''}`,
               status: (o.status || '').toUpperCase(),
               time: formatTime(o.updated_at || o.created_at),
-              image: o.seller_profile_image ? `http://localhost:5000${o.seller_profile_image}` : null,
+              image: o.seller_profile_image ? window.getImageUrl(o.seller_profile_image) : null,
               hasChat: s !== 'pending',
               itemType: o.item_type,
               createdAt: o.updated_at || o.created_at,
@@ -139,7 +139,7 @@ const Notifications = () => {
               withPerson: `${o.buyer_first_name} ${o.buyer_last_name || ''}`,
               status: (o.status || '').toUpperCase(),
               time: formatTime(o.updated_at || o.created_at),
-              image: o.buyer_profile_image ? `http://localhost:5000${o.buyer_profile_image}` : null,
+              image: o.buyer_profile_image ? window.getImageUrl(o.buyer_profile_image) : null,
               iconType: o.item_type === 'skill' ? 'purple' : 'blue',
               iconSvg: o.item_type === 'skill'
                 ? <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
@@ -163,7 +163,7 @@ const Notifications = () => {
               withPerson: `${n.seller_first_name} ${n.seller_last_name || ''}`,
               status: 'AVAILABLE',
               time: formatTime(n.created_at),
-              image: n.seller_profile_image ? `http://localhost:5000${n.seller_profile_image}` : null,
+              image: n.seller_profile_image ? window.getImageUrl(n.seller_profile_image) : null,
               iconType: 'blue',
               iconSvg: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>,
               hasChat: false,
@@ -208,23 +208,6 @@ const Notifications = () => {
             combined = [...combined, ...generalNotifs];
           }
         }
-
-        // Add mock admin notification
-        const adminNotif = {
-          id: 'admin-1',
-          type: 'admin_announcement',
-          title: 'System Update',
-          description: 'TalentNest has been updated to version 2.0 with improved security.',
-          withPerson: 'System Admin',
-          status: 'INFO',
-          time: '3 hours ago',
-          iconType: 'dark',
-          iconSvg: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>,
-          hasChat: false,
-          itemType: 'admin',
-          createdAt: new Date(Date.now() - 3 * 3600000).toISOString()
-        };
-        combined = [...combined, adminNotif];
 
         combined.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setNotificationsData(combined);

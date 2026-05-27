@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import api from '../../api/axiosConfig';
+import api, { API_BASE_URL } from '../../api/axiosConfig';
 import Sidebar from '../Common/Sidebar';
 import '../Dashboard/Index.css';
 import './Messages.css';
@@ -169,7 +169,7 @@ const Messages = () => {
             }
           }
         }
-      } else if (groups.length > 0 && !activePartnerId) {
+      } else if (groups.length > 0 && !activePartnerId && window.innerWidth > 768) {
         setActivePartnerId(groups[0].partner_id);
       }
       setLoading(false);
@@ -234,7 +234,7 @@ const Messages = () => {
     if (!user) return;
 
     const token = localStorage.getItem('token');
-    const socket = io('http://localhost:5000', {
+    const socket = io(API_BASE_URL, {
       auth: { token }
     });
 
@@ -520,7 +520,7 @@ const Messages = () => {
   const getPartnerAvatar = (obj) => {
     const imgPath = obj.partner_image || obj.profile_image;
     if (imgPath && imgPath !== 'undefined' && imgPath !== 'null' && imgPath !== '/uploads/undefined') {
-      return <img src={`http://localhost:5000${imgPath}`} alt="Profile" style={{width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover'}} />;
+      return <img src={`${API_BASE_URL}${imgPath}`} alt="Profile" style={{width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover'}} />;
     }
     const name = obj.partner_name || (obj.first_name ? `${obj.first_name} ${obj.last_name || ''}` : null) || 'U';
     const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -541,7 +541,7 @@ const Messages = () => {
       <main className="dashboard-main">
         <Header user={user} showSearch={false} />
 
-        <div className="chat-layout">
+        <div className={`chat-layout ${activePartnerId ? 'has-active-chat' : ''}`}>
           <div className="chat-sidebar">
             <h2 className="chat-sidebar-title">Messages</h2>
             <div className="chat-search">
@@ -594,15 +594,29 @@ const Messages = () => {
               <>
                 <div className="chat-header">
                   <div className="chat-header-user">
+                    <button 
+                      className="chat-back-btn" 
+                      onClick={() => setActivePartnerId(null)}
+                      aria-label="Back to chats list"
+                      style={{
+                        display: 'none',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'none',
+                        border: 'none',
+                        color: '#64748b',
+                        cursor: 'pointer',
+                        padding: '0.25rem',
+                        marginRight: '0.5rem'
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    </button>
                     <div className="chat-avatar">
                       {getPartnerAvatar(activeGroup)}
                     </div>
                     <div className="chat-header-info">
                       <h3>{activeGroup.partner_name}</h3>
-                      <span className={`status-text ${isOnline(activeGroup.partner_id) ? 'online' : 'offline'}`}>
-                        <span className={isOnline(activeGroup.partner_id) ? 'online-dot' : 'offline-dot'} />
-                        {isOnline(activeGroup.partner_id) ? 'Online now' : 'Offline'}
-                      </span>
                     </div>
                   </div>
                 </div>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import api from '../../api/axiosConfig';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from '../Common/Sidebar';
 import Pagination from '../Common/Pagination';
 import '../Dashboard/Index.css';
@@ -11,7 +10,12 @@ import Header from '../Common/Header';
 const Orders = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = location.state?.user || JSON.parse(localStorage.getItem('user')) || { id: 5, firstName: 'Student', lastName: '', email: 'student@university.edu' };
+  const user = location.state?.user || JSON.parse(localStorage.getItem('user'));
+  const token = localStorage.getItem('token');
+
+  if (!user || !token || token === 'undefined') {
+    return <Navigate to="/login" />;
+  }
   const handlePrefix = user.email ? user.email.split('@')[0].toUpperCase() : '';
 
   const [activeTab, setActiveTab] = useState(() => {
@@ -488,7 +492,7 @@ const Orders = () => {
                   </div>
 
                   <div className="ord-itm-body">
-                    <img src={order.itemImage ? `http://localhost:5000${order.itemImage}` : `https://placehold.co/80x80/e2e8f0/cbd5e1?text=${order.category}`} alt={order.itemTitle} className="ord-itm-ava" />
+                    <img src={order.itemImage ? window.getImageUrl(order.itemImage) : `https://placehold.co/80x80/e2e8f0/cbd5e1?text=${order.category}`} alt={order.itemTitle} className="ord-itm-ava" />
                     <div className="ord-itm-core">
                       <div className="ord-itm-titlerow">
                         <h4 className="ord-itm-name">{order.itemTitle}</h4>
@@ -503,7 +507,7 @@ const Orders = () => {
                           {activeTab === 'buyer' ? 'Seller: ' : 'Buyer: '}
                           {activeTab === 'buyer' ? (
                             order.seller_profile_image ? (
-                              <img src={`http://localhost:5000${order.seller_profile_image}`} alt="Seller" style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover' }} />
+                              <img src={window.getImageUrl(order.seller_profile_image)} alt="Seller" style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover' }} />
                             ) : (
                               <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#E5E7EB', color: '#4B5563', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 'bold' }}>
                                 {order.seller_first_name?.[0]?.toUpperCase() || 'U'}
@@ -511,7 +515,7 @@ const Orders = () => {
                             )
                           ) : (
                             order.buyer_profile_image ? (
-                              <img src={`http://localhost:5000${order.buyer_profile_image}`} alt="Buyer" style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover' }} />
+                              <img src={window.getImageUrl(order.buyer_profile_image)} alt="Buyer" style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover' }} />
                             ) : (
                               <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#E5E7EB', color: '#4B5563', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 'bold' }}>
                                 {order.buyer_first_name?.[0]?.toUpperCase() || 'U'}

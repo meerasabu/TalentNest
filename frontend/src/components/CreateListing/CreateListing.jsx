@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import api from '../../api/axiosConfig';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../Dashboard/Index.css'; 
@@ -81,12 +80,12 @@ const CreateListing = () => {
       
       if (item.image_urls) {
         setExistingImages(item.image_urls);
-        setPreviews(item.image_urls.map(url => `http://localhost:5000${url}`));
+        setPreviews(item.image_urls.map(url => window.getImageUrl(url)));
       }
 
       if (item.demo_media) {
         setExistingDemoMedia(item.demo_media);
-        setDemoPreviews(item.demo_media.map(url => `http://localhost:5000${url}`));
+        setDemoPreviews(item.demo_media.map(url => window.getImageUrl(url)));
       }
     } else if (location.state?.initialTab) {
       setActiveTab(location.state.initialTab);
@@ -126,6 +125,22 @@ const CreateListing = () => {
 
   const [currentStep, setCurrentStep] = useState(1);
 
+  // Cleanup object URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      previews.forEach(url => {
+        if (url && !url.startsWith('data:') && !url.startsWith('http')) {
+          try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ }
+        }
+      });
+      demoPreviews.forEach(url => {
+        if (url && !url.startsWith('data:') && !url.startsWith('http')) {
+          try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ }
+        }
+      });
+    };
+  }, []);
+
   const handleTabChange = (tab) => {
     if (isEditMode) return; // Prevent changing tab in edit mode
     setActiveTab(tab);
@@ -143,7 +158,7 @@ const CreateListing = () => {
       setImages(prev => {
         const newImages = [...prev, ...selectedFiles].slice(0, 4 - existingImages.length);
         const newPreviews = [
-          ...existingImages.map(url => `http://localhost:5000${url}`),
+          ...existingImages.map(url => window.getImageUrl(url)),
           ...newImages.map(file => URL.createObjectURL(file))
         ];
         setPreviews(newPreviews);
@@ -158,7 +173,7 @@ const CreateListing = () => {
       const updatedExisting = existingImages.filter((_, idx) => idx !== indexToRemove);
       setExistingImages(updatedExisting);
       setPreviews([
-        ...updatedExisting.map(url => `http://localhost:5000${url}`),
+        ...updatedExisting.map(url => window.getImageUrl(url)),
         ...images.map(file => URL.createObjectURL(file))
       ]);
     } else {
@@ -167,7 +182,7 @@ const CreateListing = () => {
       setImages(prev => {
         const newImages = prev.filter((_, idx) => idx !== relativeIdx);
         setPreviews([
-          ...existingImages.map(url => `http://localhost:5000${url}`),
+          ...existingImages.map(url => window.getImageUrl(url)),
           ...newImages.map(file => URL.createObjectURL(file))
         ]);
         return newImages;
@@ -199,7 +214,7 @@ const CreateListing = () => {
       setDemoMedia(prev => {
         const newDemos = [...prev, ...selectedFiles].slice(0, 4 - existingDemoMedia.length);
         const newPreviews = [
-          ...existingDemoMedia.map(url => `http://localhost:5000${url}`),
+          ...existingDemoMedia.map(url => window.getImageUrl(url)),
           ...newDemos.map(file => URL.createObjectURL(file))
         ];
         setDemoPreviews(newPreviews);
@@ -213,7 +228,7 @@ const CreateListing = () => {
       const updatedExisting = existingDemoMedia.filter((_, idx) => idx !== indexToRemove);
       setExistingDemoMedia(updatedExisting);
       setDemoPreviews([
-        ...updatedExisting.map(url => `http://localhost:5000${url}`),
+        ...updatedExisting.map(url => window.getImageUrl(url)),
         ...demoMedia.map(file => URL.createObjectURL(file))
       ]);
     } else {
@@ -221,7 +236,7 @@ const CreateListing = () => {
       setDemoMedia(prev => {
         const newDemos = prev.filter((_, idx) => idx !== relativeIdx);
         setDemoPreviews([
-          ...existingDemoMedia.map(url => `http://localhost:5000${url}`),
+          ...existingDemoMedia.map(url => window.getImageUrl(url)),
           ...newDemos.map(file => URL.createObjectURL(file))
         ]);
         return newDemos;
@@ -382,7 +397,9 @@ const CreateListing = () => {
       data.append('images', img);
     });
 
-    let endpoint = 'http://localhost:5000/api/';
+    const rawUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const cleanUrl = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl;
+    let endpoint = `${cleanUrl}/api/`;
     let method = isEditMode ? 'put' : 'post';
 
     if (activeTab === 'product' || activeTab === 'products') {

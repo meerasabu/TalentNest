@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import api from '../../api/axiosConfig';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from '../Common/Sidebar';
@@ -52,7 +51,7 @@ const Services = () => {
     e.stopPropagation();
     try {
       const res = await api.post('/wishlist', {
-        userId: user.id || 5,
+        userId: user.id,
         itemType: 'service',
         itemId
       });
@@ -259,13 +258,13 @@ const Services = () => {
                    <div key={service.id} className="srv-card" onClick={() => navigate(`/service/${service.id}`, { state: { user } })} style={{cursor: 'pointer'}}>
                      <div className="srv-img-layer">
                        {service.image_urls && service.image_urls.length > 0 ? (
-                         <img src={`http://localhost:5000${service.image_urls[0]}`} alt={service.title} className="srv-img"/>
+                         <img src={window.getImageUrl(service.image_urls[0])} alt={service.title} className="srv-img"/>
                        ) : (
                          <div className="srv-img srv-gradient-bg"></div>
                        )}
                        <div className="srv-img-overlay">
                           <span className="srv-tag-cat">{service.service_type || 'General'}</span>
-                          <span className="srv-tag-rate"><span className="srv-rate-star">★</span> {service.rating || '0.0'}</span>
+                          <span className="srv-tag-rate"><span className="srv-rate-star">★</span></span>
                        </div>
                        {service.status && (
                          <span style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>
@@ -280,7 +279,7 @@ const Services = () => {
                        <h3 className="srv-card-title">{service.title}</h3>
                        
                        <div className="srv-author-row">
-                         <img src={service.profile_image ? `http://localhost:5000${service.profile_image}` : "https://placehold.co/24x24/e2e8f0/e2e8f0"} alt="Avatar" className="srv-auth-ava" style={{objectFit: 'cover'}}/>
+                         <img src={service.profile_image ? window.getImageUrl(service.profile_image) : "https://placehold.co/24x24/e2e8f0/e2e8f0"} alt="Avatar" className="srv-auth-ava" style={{objectFit: 'cover'}}/>
                          <span className="srv-auth-lbl">by <strong>{service.first_name} {service.last_name?.charAt(0)}.</strong></span>
                        </div>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/axiosConfig';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useNavigate, useLocation, useParams, Navigate } from 'react-router-dom';
 import Sidebar from '../Common/Sidebar';
 import '../Dashboard/Index.css'; 
 import './ServiceDetails.css';
@@ -27,7 +27,12 @@ const ServiceDetails = () => {
   const location = useLocation();
   const { id } = useParams();
   
-  const user = location.state?.user || JSON.parse(localStorage.getItem('user')) || { id: 5, firstName: 'Student', lastName: '', email: 'student@university.edu' };
+  const user = location.state?.user || JSON.parse(localStorage.getItem('user'));
+  const token = localStorage.getItem('token');
+
+  if (!user || !token || token === 'undefined') {
+    return <Navigate to="/login" />;
+  }
   const handlePrefix = user.email ? user.email.split('@')[0].toUpperCase() : '';
 
   const [service, setService] = useState(null);
@@ -148,7 +153,7 @@ const ServiceDetails = () => {
   }
 
   const mainImageUrl = service.image_urls && service.image_urls.length > 0 
-    ? `http://localhost:5000${service.image_urls[0]}` 
+    ? window.getImageUrl(service.image_urls[0]) 
     : 'https://placehold.co/1200x500/e6e3df/a39589?text=Service';
 
   return (
@@ -182,7 +187,7 @@ const ServiceDetails = () => {
                 <span className="sd-hero-tag" style={{textTransform: 'uppercase'}}>{service.service_type}</span>
                 <h1 className="sd-hero-title">{service.title}</h1>
                 <div className="sd-hero-meta">
-                  <span><span className="sd-rate-star">★</span> 0.0 (0 Reviews)</span>
+                  <span><span className="sd-rate-star">★</span> (0 Reviews)</span>
                   <span>•</span>
                   <span><svg style={{display:'inline', marginRight:'4px', verticalAlign:'sub'}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Professional Service</span>
                   <span>•</span>
@@ -316,7 +321,7 @@ const ServiceDetails = () => {
               <div className="sd-content-right">
                 
                 <div className="sd-seller-card">
-                  <img src={service.profile_image ? `http://localhost:5000${service.profile_image}` : `https://placehold.co/80x80/222/fff?text=${service.first_name?.[0] || 'U'}${service.last_name?.[0] || ''}`} alt={service.first_name} className="sd-seller-avatar" style={{objectFit: 'cover'}} />
+                  <img src={service.profile_image ? window.getImageUrl(service.profile_image) : `https://placehold.co/80x80/222/fff?text=${service.first_name?.[0] || 'U'}${service.last_name?.[0] || ''}`} alt={service.first_name} className="sd-seller-avatar" style={{objectFit: 'cover'}} />
                   <h4 className="sd-seller-name">{service.first_name} {service.last_name}</h4>
                   <p className="sd-seller-role">Member since {new Date(service.created_at).getFullYear()}</p>
                   
@@ -340,31 +345,6 @@ const ServiceDetails = () => {
                 </div>
 
               </div>
-            </div>
-
-            {/* Similar Services */}
-            <div className="sd-similar-head">
-              <h2 style={{fontSize: '1.25rem', fontWeight: 700, margin: 0}}>Similar Services</h2>
-              <span className="sd-view-all" onClick={() => navigate('/services', { state: { user}})}>View all ›</span>
-            </div>
-            
-            <div className="sd-similar-grid">
-              {[
-                { title: "Resume Review & Consulting", cat: "Free", rate: "Free", bg: "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=500&auto=format&fit=crop&q=60", author: "Career Services" },
-                { title: "Professional Headshots", cat: "₹30", rate: "₹30", bg: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&auto=format&fit=crop&q=60", author: "Studio Pro" },
-                { title: "Campus Tour Guide", cat: "₹20/hr", rate: "₹20/hr", bg: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=500&auto=format&fit=crop&q=60", author: "Student Ambassadors" }
-              ].map((sim, i) => (
-                <div key={i} className="sd-sim-card">
-                  <img src={sim.bg} className="sd-sim-img" alt={sim.title} />
-                  <div className="sd-sim-overlay">
-                    <h4 className="sd-sim-title">{sim.title}</h4>
-                    <div className="sd-sim-bottom">
-                      <span className="sd-sim-author">by {sim.author}</span>
-                      <span className="sd-sim-rate">{sim.rate}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
             </div>
 
           </div>

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import api from '../../api/axiosConfig';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from '../Common/Sidebar';
@@ -51,7 +50,7 @@ const Marketplace = () => {
     e.stopPropagation();
     try {
       const res = await api.post('/wishlist', {
-        userId: user.id || 5,
+        userId: user.id,
         itemType: 'product',
         itemId
       });
@@ -206,7 +205,7 @@ const Marketplace = () => {
               <div key={prod.id} className="market-card" onClick={() => navigate(`/product/${prod.id}`, { state: { user } })} style={{cursor: 'pointer'}}>
                  <div className="market-card-img-wrap">
                    {prod.image_urls && prod.image_urls.length > 0 ? (
-                     <img src={`http://localhost:5000${prod.image_urls[0]}`} alt={prod.title} className="market-card-img" />
+                     <img src={window.getImageUrl(prod.image_urls[0])} alt={prod.title} className="market-card-img" />
                    ) : (
                      <div className="market-card-img placeholder-null"></div>
                    )}
@@ -227,16 +226,15 @@ const Marketplace = () => {
 
                  <div className="market-card-body">
                     <h3 className="prod-title">{prod.title}</h3>
-                    <div className="prod-rating">
-                       <span style={{ color: '#FBBF24', fontSize: '0.75rem', marginRight: '2px' }}>⭐</span>
-                       <span className="rating-num">{prod.rating ? parseFloat(prod.rating).toFixed(1) : '0.0'}</span>
-                       <span className="rating-revs">({prod.reviews || 0} {prod.reviews === 1 ? 'Review' : 'Reviews'})</span>
-                    </div>
+                     <div className="prod-rating">
+                        <span style={{ color: '#FBBF24', fontSize: '0.75rem', marginRight: '2px' }}>⭐</span>
+                        <span className="rating-revs">({prod.reviews || 0} {prod.reviews === 1 ? 'Review' : 'Reviews'})</span>
+                     </div>
                     
                     <div className="prod-seller-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
                       {prod.profile_image ? (
                         <img 
-                          src={`http://localhost:5000${prod.profile_image}`} 
+                          src={window.getImageUrl(prod.profile_image)} 
                           alt={prod.first_name} 
                           style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover' }} 
                         />
